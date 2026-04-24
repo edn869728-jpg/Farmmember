@@ -1,0 +1,33 @@
+name: Clasp Push & Deploy
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/**'
+
+jobs:
+  clasp-push-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install CLASP
+        run: npm install -g @google/clasp
+
+      - name: 寫入 CLASP Token
+        run: echo '${{ secrets.CLASP_TOKEN }}' > ~/.clasprc.json
+
+      - name: CLASP Push
+        run: clasp push --force
+
+      - name: CLASP Deploy
+        run: clasp deploy -i ${{ secrets.CLASP_DEPLOYMENT_ID }} -d "Auto deploy from GitHub Actions"
