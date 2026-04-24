@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <title>🌾 Farmmember</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div id="game">
+
+  <!-- ── TOP BAR ── -->
+  <header id="top-bar">
+    <div class="stat-badge" id="level-badge">
+      <span class="icon">⭐</span>
+      <span id="level">Lv.1</span>
+    </div>
+    <div class="xp-bar-wrap" title="經驗值">
+      <div id="xp-bar"></div>
+    </div>
+    <div class="stat-badge">
+      <span class="icon">💰</span>
+      <span id="coins">50</span>
+    </div>
+    <div class="stat-badge">
+      <span class="icon">⚡</span>
+      <span id="stamina">10</span>
+    </div>
+  </header>
+
+  <!-- ── MAIN FARM (3×5 grid) ── -->
+  <main id="farm-area">
+    <div id="farm-grid">
+      <!-- cells injected by game.js -->
+    </div>
+  </main>
+
+  <!-- ── BOTTOM MENU ── -->
+  <footer id="bottom-menu">
+    <div id="seed-row">
+      <!-- seed buttons injected by game.js -->
+    </div>
+    <div id="action-row">
+      <button class="action-btn" id="harvest-all-btn">🌾 全部採收</button>
+      <button class="action-btn" id="shop-btn">🏪 商店</button>
+    </div>
+  </footer>
+
+</div><!-- #game -->
+
+<!-- ── SHOP MODAL ── -->
+<div id="modal-overlay">
+  <div id="modal-box">
+    <div class="modal-header">
+      <h2>🏪 種子商店</h2>
+      <button id="modal-close">✕</button>
+    </div>
+    <div id="shop-list">
+      <!-- shop items injected by game.js -->
+    </div>
+  </div>
+</div>
+
+<!-- ── LEVEL-UP POPUP ── -->
+<div id="levelup-popup">
+  <div id="levelup-banner">🎉 升級！🎉</div>
+</div>
+
+<!-- ── TOAST ── -->
+<div id="toast"></div>
+
+<script src="game.js"></script>
+</body>
+</html>
