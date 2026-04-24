@@ -17,7 +17,8 @@
   --soil:    #6D4C41;
   --soil-light: #A1887F;
 
-  --bar-h: 72px;
+  --bar-h:  72px;
+  --crop-panel-h: 28px;
   --menu-h: 130px;
   --cell-gap: 8px;
 }
@@ -47,8 +48,8 @@ html, body {
   border-bottom: 4px solid var(--dark-brown);
   display: flex;
   align-items: center;
-  padding: 0 10px;
-  gap: 8px;
+  padding: 0 8px;
+  gap: 6px;
   flex-shrink: 0;
   box-shadow: 0 4px 0 rgba(0,0,0,0.25);
   z-index: 10;
@@ -61,24 +62,30 @@ html, body {
   background: rgba(255,255,255,0.85);
   border: 3px solid var(--dark-brown);
   border-radius: 20px;
-  padding: 4px 10px;
+  padding: 4px 8px;
   font-weight: 900;
-  font-size: 13px;
+  font-size: 12px;
   color: var(--dark-brown);
   white-space: nowrap;
   box-shadow: 0 3px 0 rgba(0,0,0,0.2);
+  flex-shrink: 0;
 }
 
-.stat-badge .icon { font-size: 16px; }
+.stat-badge .icon { font-size: 15px; }
 
 #level-badge {
   background: linear-gradient(135deg, var(--purple) 0%, var(--pink) 100%);
   color: #fff;
   border-color: var(--dark-brown);
-  min-width: 70px;
+  min-width: 64px;
 }
 
-#level-badge .icon { font-size: 14px; }
+#level-badge .icon { font-size: 13px; }
+
+#weather-badge {
+  background: rgba(255,255,255,0.85);
+  font-size: 11px;
+}
 
 .xp-bar-wrap {
   flex: 1;
@@ -97,6 +104,30 @@ html, body {
   width: 0%;
 }
 
+/* ========== CROP EXCHANGE POINTS PANEL ========== */
+#crop-points-panel {
+  height: var(--crop-panel-h);
+  background: rgba(255,255,255,0.75);
+  border-bottom: 2px solid var(--dark-brown);
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--dark-brown);
+  flex-shrink: 0;
+  gap: 4px;
+  overflow: hidden;
+}
+
+#crop-points-panel span {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 12px;
+}
+
 /* ========== FARM AREA ========== */
 #farm-area {
   flex: 1;
@@ -104,7 +135,7 @@ html, body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 12px 16px;
+  padding: 10px 14px;
   position: relative;
   overflow: hidden;
 }
@@ -165,9 +196,20 @@ html, body {
 
 .cell.empty:hover { filter: brightness(1.15); }
 
-.cell.planted { background: #8B6914; }
 .cell.growing { background: #7B5E1A; }
 .cell.ready   { background: #5D8A14; animation: pulse-green 1.2s ease-in-out infinite; }
+
+/* Dead / wilted crop */
+.cell.dead {
+  background: #5a4a3a;
+  animation: wilt-pulse 2s ease-in-out infinite;
+  cursor: pointer;
+}
+
+@keyframes wilt-pulse {
+  0%, 100% { filter: brightness(0.85); }
+  50%       { filter: brightness(1.1); }
+}
 
 @keyframes pulse-green {
   0%, 100% { box-shadow: inset 0 2px 4px rgba(0,0,0,0.3), 0 0 0 0 rgba(100,220,50,0.6); }
@@ -274,7 +316,7 @@ html, body {
   border-radius: 12px;
   padding: 6px 10px;
   cursor: pointer;
-  min-width: 64px;
+  min-width: 60px;
   flex-shrink: 0;
   transition: transform 0.15s, filter 0.15s;
   box-shadow: 0 4px 0 rgba(0,0,0,0.3);
@@ -294,21 +336,21 @@ html, body {
   cursor: not-allowed;
 }
 
-.seed-btn .seed-emoji { font-size: 24px; }
-.seed-btn .seed-name  { font-size: 10px; font-weight: 700; color: var(--dark-brown); }
-.seed-btn .seed-cost  { font-size: 10px; color: var(--orange); font-weight: 900; }
+.seed-btn .seed-emoji { font-size: 22px; }
+.seed-btn .seed-name  { font-size: 9px; font-weight: 700; color: var(--dark-brown); }
+.seed-btn .seed-cost  { font-size: 9px; color: var(--orange); font-weight: 900; }
 
 .seed-btn .lock-icon {
   position: absolute;
   top: 2px; right: 4px;
-  font-size: 12px;
+  font-size: 11px;
 }
 
-/* Action row (harvest all + shop) */
+/* Action row (4 buttons) */
 #action-row {
   display: flex;
-  gap: 8px;
-  padding: 4px 10px 8px;
+  gap: 5px;
+  padding: 4px 8px 8px;
 }
 
 .action-btn {
@@ -316,11 +358,11 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 8px;
+  gap: 3px;
+  padding: 7px 2px;
   border: 3px solid var(--dark-brown);
   border-radius: 12px;
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 900;
   cursor: pointer;
   box-shadow: 0 4px 0 rgba(0,0,0,0.3);
@@ -330,15 +372,18 @@ html, body {
 }
 
 .action-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(0,0,0,0.3); }
-
-#harvest-all-btn {
-  background: linear-gradient(135deg, #66BB6A 0%, #2E7D32 100%);
-}
-#shop-btn {
-  background: linear-gradient(135deg, #AB47BC 0%, #6A1B9A 100%);
+.action-btn:disabled {
+  filter: brightness(0.65);
+  cursor: not-allowed;
+  transform: none;
 }
 
-/* ========== MODAL / OVERLAY ========== */
+#water-btn       { background: linear-gradient(135deg, #29B6F6 0%, #0277BD 100%); }
+#harvest-all-btn { background: linear-gradient(135deg, #66BB6A 0%, #2E7D32 100%); }
+#shop-btn        { background: linear-gradient(135deg, #AB47BC 0%, #6A1B9A 100%); }
+#qr-btn          { background: linear-gradient(135deg, #FF7043 0%, #BF360C 100%); }
+
+/* ========== MODAL / OVERLAY (shared) ========== */
 #modal-overlay {
   display: none;
   position: fixed;
@@ -429,6 +474,154 @@ html, body {
   cursor: not-allowed;
 }
 
+/* ========== PHONE BINDING MODAL ========== */
+#phone-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.65);
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
+}
+
+#phone-modal.visible { display: flex; }
+
+#phone-box {
+  background: linear-gradient(160deg, #FFF9C4 0%, #FFECB3 100%);
+  border: 4px solid var(--dark-brown);
+  border-radius: 20px;
+  padding: 28px 24px;
+  width: min(320px, 88vw);
+  box-shadow: 0 8px 0 rgba(0,0,0,0.35);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  text-align: center;
+}
+
+.phone-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.phone-icon { font-size: 36px; }
+
+#phone-box h2 {
+  font-size: 17px;
+  color: var(--dark-brown);
+}
+
+.phone-hint {
+  font-size: 13px;
+  color: #666;
+  line-height: 1.5;
+}
+
+#phone-input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 3px solid var(--dark-brown);
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--dark-brown);
+  background: #fff;
+  outline: none;
+  text-align: center;
+}
+
+#phone-input:focus { border-color: var(--orange); box-shadow: 0 0 0 3px rgba(255,152,0,0.3); }
+
+#phone-submit-btn {
+  width: 100%;
+  padding: 12px;
+  background: linear-gradient(135deg, #66BB6A 0%, #2E7D32 100%);
+  border: 3px solid var(--dark-brown);
+  border-radius: 14px;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 4px 0 rgba(0,0,0,0.3);
+}
+
+#phone-submit-btn:disabled { background: #aaa; cursor: not-allowed; }
+
+/* ========== QR CODE MODAL ========== */
+#qr-modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.65);
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
+}
+
+#qr-modal-overlay.visible { display: flex; }
+
+#qr-modal {
+  background: linear-gradient(160deg, #FFF9C4 0%, #FFECB3 100%);
+  border: 4px solid var(--dark-brown);
+  border-radius: 20px;
+  padding: 20px 18px;
+  width: min(300px, 88vw);
+  box-shadow: 0 8px 0 rgba(0,0,0,0.35);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+}
+
+#qr-modal h2 {
+  font-size: 17px;
+  color: var(--dark-brown);
+  text-align: center;
+}
+
+#qr-modal-close {
+  align-self: flex-end;
+  background: var(--red);
+  border: 3px solid var(--dark-brown);
+  border-radius: 50%;
+  width: 32px; height: 32px;
+  font-size: 16px;
+  cursor: pointer;
+  color: #fff;
+  font-weight: 900;
+  box-shadow: 0 3px 0 rgba(0,0,0,0.3);
+  position: absolute;
+  top: -14px; right: -12px;
+}
+
+#qr-code-container {
+  background: #FFF8E7;
+  padding: 10px;
+  border: 3px solid var(--dark-brown);
+  border-radius: 12px;
+}
+
+#qr-code-container canvas,
+#qr-code-container img { display: block; }
+
+#qr-user-info {
+  font-size: 13px;
+  color: var(--dark-brown);
+  text-align: center;
+  line-height: 1.6;
+}
+
+.qr-hint {
+  font-size: 11px;
+  color: #888;
+  text-align: center;
+}
+
 /* ========== LEVEL UP POPUP ========== */
 #levelup-popup {
   display: none;
@@ -471,14 +664,16 @@ html, body {
   background: rgba(50,30,0,0.9);
   color: #FFD700;
   font-weight: 900;
-  font-size: 14px;
-  padding: 8px 20px;
+  font-size: 13px;
+  padding: 8px 18px;
   border-radius: 20px;
   border: 2px solid var(--yellow);
   display: none;
   z-index: 300;
   text-align: center;
-  white-space: nowrap;
+  max-width: 88vw;
+  white-space: normal;
+  word-break: break-word;
 }
 
 #toast.visible {
