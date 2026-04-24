@@ -19,7 +19,7 @@
  */
 function sendLineNotification(lineUserId, text) {
   if (!lineUserId || !text) return;
-  if (!LINE_CHANNEL_ACCESS_TOKEN || LINE_CHANNEL_ACCESS_TOKEN === 'YOUR_LINE_CHANNEL_ACCESS_TOKEN') {
+  if (!LINE_CHANNEL_ACCESS_TOKEN) {
     Logger.log('[notify] LINE token not configured – skipping push: ' + text);
     return;
   }

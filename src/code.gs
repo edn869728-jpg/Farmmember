@@ -30,11 +30,15 @@
  */
 
 // ─── CONFIGURATION ───────────────────────────────────────────────────────────
-const SPREADSHEET_ID          = 'YOUR_SPREADSHEET_ID';
-const SHEET_NAME              = 'members';
-const LINE_CHANNEL_ACCESS_TOKEN = 'YOUR_LINE_CHANNEL_ACCESS_TOKEN';
-const CWA_API_KEY             = 'YOUR_CWA_API_KEY';  // opendata.cwa.gov.tw
-const PULI_STATION_ID         = 'C0I090';             // 埔里氣象站
+// Store these values in Apps Script → Project Settings → Script Properties:
+//   SPREADSHEET_ID, LINE_CHANNEL_ACCESS_TOKEN, CWA_API_KEY
+// Fallback to placeholder strings so the script does not throw on first deploy.
+const _props = PropertiesService.getScriptProperties();
+const SPREADSHEET_ID            = _props.getProperty('SPREADSHEET_ID')            || 'YOUR_SPREADSHEET_ID';
+const LINE_CHANNEL_ACCESS_TOKEN = _props.getProperty('LINE_CHANNEL_ACCESS_TOKEN') || '';
+const CWA_API_KEY               = _props.getProperty('CWA_API_KEY')               || '';
+const PULI_STATION_ID           = 'C0I090'; // 埔里氣象站
+const SHEET_NAME                = 'members';
 
 // Column indices (1-based)
 const COL = {
@@ -260,6 +264,8 @@ function handleAddPoints(body) {
   const sheet       = getSheet();
   const currentPts  = Number(found.data[COL.point - 1]) || 0;
   const newPts      = currentPts + pts;
+  // Rolling 1-year expiry: each new transaction extends the expiry date to 1 year
+  // from now (whole balance shares a single expiry for simplicity).
   const expireDate  = new Date();
   expireDate.setFullYear(expireDate.getFullYear() + 1);
   const expireStr   = Utilities.formatDate(expireDate, 'Asia/Taipei', 'yyyy-MM-dd');
@@ -428,10 +434,11 @@ function dailyTrigger() {
       sendLineNotification(userId, `🌦 今天大雨（${rain}mm），不需要澆水！作物加速成長 ×1.6 🌱`);
     }
 
-    // Drought warning
+    // Drought warning – notify the day BEFORE the death threshold so the player
+    // still has a chance to open the app and water.
     const droughtLimit = temp > 30 ? 3 : 5;
     if (noWaterDays >= droughtLimit - 1 && lastWatered !== today) {
-      sendLineNotification(userId, `☀️ 您的作物已 ${noWaterDays} 天未澆水！請盡快到農場澆水，否則作物將枯萎 🥀`);
+      sendLineNotification(userId, `☀️ 您的作物已連續 ${noWaterDays} 天未澆水，明天若不澆水將枯萎 🥀 請盡快到農場澆水！`);
     }
 
     // Expiry reminder (30 days before)

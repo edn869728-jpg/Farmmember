@@ -545,7 +545,8 @@ function processOneDayGrowth(rain, temp, watered) {
     multiplier = watered ? 1.5 : 1.0;
   } else {
     // No rain
-    multiplier = watered ? 1.5 : 0.1; // ×0.7/week ≈ ×0.1/day without water
+    // Spec: ×0.7/週 means 70% of normal daily rate without water
+    multiplier = watered ? 1.5 : 0.7;
   }
 
   // Update consecutive-no-water counter FIRST so death check reflects today's state
