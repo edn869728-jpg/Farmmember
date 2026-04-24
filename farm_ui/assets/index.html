@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>LINE 會員農場 UI</title>
+  <style>
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html,body{margin:0;width:100%;min-height:100%;background:#111;font-family:"Noto Sans TC","Microsoft JhengHei",Arial,sans-serif;overflow-x:hidden}.wrap{width:100vw;min-height:100vh;display:flex;justify-content:center;align-items:flex-start;background:#111}.game{position:relative;width:min(100vw,575px);height:calc(min(100vw,575px) * 1872 / 575);max-height:100vh;aspect-ratio:575/1872;background:url("assets/bg.jpg") center/cover no-repeat;overflow:hidden;box-shadow:0 0 30px rgba(0,0,0,.65);transform-origin:top center}.spark{position:absolute;width:5px;height:5px;border-radius:99px;background:rgba(255,242,110,.9);box-shadow:0 0 10px 4px rgba(255,230,85,.65);animation:twinkle 2.8s infinite ease-in-out}.spark:nth-child(1){left:17%;top:39%;animation-delay:.2s}.spark:nth-child(2){left:58%;top:44%;animation-delay:.8s}.spark:nth-child(3){left:86%;top:51%;animation-delay:1.1s}.spark:nth-child(4){left:31%;top:75%;animation-delay:1.6s}@keyframes twinkle{0%,100%{opacity:.25;transform:scale(.7)}50%{opacity:1;transform:scale(1.5)}}.member-card{position:absolute;left:7.5%;top:3.05%;width:85%;filter:drop-shadow(0 9px 8px rgba(0,0,0,.28));z-index:5}.sign{position:absolute;left:21%;top:38.5%;width:42%;filter:drop-shadow(0 16px 12px rgba(59,35,10,.28));z-index:6}.notice-dot{position:absolute;right:33%;top:38.3%;width:30px;height:30px;border-radius:50%;background:radial-gradient(circle at 35% 28%,#fff39a 0 10%,#ffae17 25%,#c8331b 70%);border:2px solid #ffd86a;color:#fff;font-weight:900;text-align:center;line-height:25px;text-shadow:0 2px 2px #73210f;box-shadow:0 3px 5px rgba(0,0,0,.25);z-index:8}.plot-grid{position:absolute;left:12.8%;top:53.7%;width:74.4%;display:grid;grid-template-columns:repeat(3,1fr);gap:2.2% 7.1%;z-index:4}.plot{position:relative;width:100%;aspect-ratio:1.15/1;border:0;background:transparent;padding:0}.plot img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 5px rgba(0,0,0,.25));transition:.16s}.plot:active img{transform:scale(.96)}.action-water{position:absolute;left:11%;top:81.3%;width:37%;z-index:9}.action-harvest{position:absolute;right:9%;top:79.2%;width:37%;z-index:9}.button-img{display:block;width:100%;filter:drop-shadow(0 8px 5px rgba(0,0,0,.25));transition:.14s}.button-img:active{transform:translateY(2px) scale(.98)}.bottom-nav{position:absolute;left:0;bottom:0;width:100%;z-index:10;filter:drop-shadow(0 -5px 10px rgba(0,0,0,.20))}.hotspot{position:absolute;border:0;background:transparent;cursor:pointer;z-index:20}.hotspot:active{background:rgba(255,255,255,.08)}.hs-card{left:7.5%;top:3%;width:85%;height:25%}.hs-shop{left:24%;top:38.7%;width:35%;height:3.2%}.hs-event{left:23%;top:42.2%;width:38%;height:3.2%}.hs-land{left:24%;top:45.8%;width:35%;height:3.1%}.hs-water{left:11%;top:81.3%;width:37%;height:6%}.hs-harvest{right:9%;top:79.2%;width:37%;height:6%}.nav-hit{bottom:0;height:6.8%;width:16.66%}.nav-home{left:0}.nav-farm{left:16.66%}.nav-bag{left:33.33%}.nav-reward{left:50%}.nav-me{left:66.66%}.nav-more{left:83.33%}.toast{position:absolute;left:50%;bottom:11%;transform:translateX(-50%) translateY(20px);background:rgba(47,74,40,.92);color:#fff7cb;padding:10px 16px;border-radius:999px;font-weight:700;box-shadow:0 6px 18px rgba(0,0,0,.25);opacity:0;pointer-events:none;z-index:99;transition:.25s}.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}@media (min-aspect-ratio:575/1872){.game{height:100vh;width:calc(100vh * 575 / 1872)}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <main class="game" id="game">
+      <span class="spark"></span><span class="spark"></span><span class="spark"></span><span class="spark"></span>
+
+      <img class="member-card" src="assets/member_card.png" alt="會員卡" />
+      <img class="sign" src="assets/sign.png" alt="功能木牌" />
+      <div class="notice-dot">1</div>
+
+      <section class="plot-grid" aria-label="農田">
+        <button class="plot" data-action="plot"><img src="assets/tile_empty.png" alt="空田地"></button>
+        <button class="plot" data-action="plot"><img src="assets/tile_empty.png" alt="空田地"></button>
+        <button class="plot" data-action="plot"><img src="assets/tile_empty.png" alt="空田地"></button>
+        <button class="plot" data-action="plot"><img src="assets/tile_fruit.png" alt="成熟作物"></button>
+        <button class="plot" data-action="plot"><img src="assets/tile_sprout2.png" alt="幼苗"></button>
+        <button class="plot" data-action="plot"><img src="assets/tile_sprout2.png" alt="幼苗"></button>
+        <button class="plot" data-action="plot"><img src="assets/tile_fruit.png" alt="成熟作物"></button>
+        <button class="plot" data-action="plot"><img src="assets/tile_grown.png" alt="成長作物"></button>
+        <button class="plot" data-action="plot"><img src="assets/tile_grown.png" alt="成長作物"></button>
+        <button class="plot" data-action="plot"><img src="assets/tile_fruit.png" alt="成熟作物"></button>
+        <button class="plot" data-action="plot"><img src="assets/tile_grown.png" alt="成長作物"></button>
+        <button class="plot" data-action="plot"><img src="assets/tile_grown.png" alt="成長作物"></button>
+      </section>
+
+      <button class="hotspot hs-card" data-action="會員卡" aria-label="會員卡"></button>
+      <button class="hotspot hs-shop" data-action="商店街" aria-label="商店街"></button>
+      <button class="hotspot hs-event" data-action="活動廣場" aria-label="活動廣場"></button>
+      <button class="hotspot hs-land" data-action="新土地" aria-label="新土地"></button>
+
+      <button class="hotspot hs-water" data-action="澆水" aria-label="澆水"><img class="button-img" src="assets/btn_water.png" alt="澆水"></button>
+      <button class="hotspot hs-harvest" data-action="收成" aria-label="收成"><img class="button-img" src="assets/btn_harvest.png" alt="收成"></button>
+
+      <img class="bottom-nav" src="assets/bottom_nav.png" alt="底部導航" />
+      <button class="hotspot nav-hit nav-home" data-action="首頁" aria-label="首頁"></button>
+      <button class="hotspot nav-hit nav-farm" data-action="農場" aria-label="農場"></button>
+      <button class="hotspot nav-hit nav-bag" data-action="庫存" aria-label="庫存"></button>
+      <button class="hotspot nav-hit nav-reward" data-action="獎勵" aria-label="獎勵"></button>
+      <button class="hotspot nav-hit nav-me" data-action="我的" aria-label="我的"></button>
+      <button class="hotspot nav-hit nav-more" data-action="更多" aria-label="更多"></button>
+
+      <div class="toast" id="toast">UI 按鈕</div>
+    </main>
+  </div>
+  <script>
+    const toast = document.getElementById('toast');
+    let timer = null;
+    document.querySelectorAll('[data-action]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const action = btn.dataset.action || '按鈕';
+        toast.textContent = action + '｜後台功能可接在這裡';
+        toast.classList.add('show');
+        clearTimeout(timer);
+        timer = setTimeout(() => toast.classList.remove('show'), 1100);
+      });
+    });
+  </script>
+</body>
+</html>
