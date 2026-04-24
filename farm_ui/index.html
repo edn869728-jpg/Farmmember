@@ -1,631 +1,68 @@
-<!DOCTYPE html>
-<html lang="zh-TW">
+<!doctype html>
+<html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <title>🌾 農場會員 UI</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>LINE 會員農場 UI</title>
   <style>
-    /* ─── Reset & Base ─── */
-    *, *::before, *::after { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
-    html, body {
-      width: 100%; height: 100%;
-      background: #0d1a0e;
-      font-family: "Noto Sans TC", "Microsoft JhengHei", Arial, sans-serif;
-      color: #e8f5e9;
-      overflow: hidden;
-    }
-
-    /* ─── Sky / Background ─── */
-    #sky {
-      position: fixed; inset: 0;
-      background: linear-gradient(180deg, #1a3a1c 0%, #2e5c30 45%, #4a7c4e 70%, #6aad6e 100%);
-      z-index: 0;
-    }
-    /* Animated clouds */
-    .cloud {
-      position: absolute;
-      background: rgba(255,255,255,0.08);
-      border-radius: 50px;
-      animation: drift linear infinite;
-    }
-    .cloud::after {
-      content: '';
-      position: absolute;
-      background: inherit;
-      border-radius: inherit;
-    }
-    @keyframes drift { from { transform: translateX(-120%); } to { transform: translateX(110vw); } }
-    .c1 { width: 120px; height: 36px; top: 8%; animation-duration: 28s; }
-    .c2 { width: 80px;  height: 24px; top: 14%; animation-duration: 42s; animation-delay: -14s; }
-    .c3 { width: 160px; height: 44px; top: 5%;  animation-duration: 55s; animation-delay: -25s; }
-
-    /* ─── Wrapper ─── */
-    #wrap {
-      position: relative; z-index: 1;
-      width: 100%; max-width: 430px;
-      height: 100dvh;
-      margin: 0 auto;
-      display: flex; flex-direction: column;
-      overflow: hidden;
-    }
-
-    /* ─── Top Bar ─── */
-    #top-bar {
-      display: flex; align-items: center; gap: 8px;
-      padding: 10px 14px 6px;
-      background: rgba(0,0,0,0.45);
-      backdrop-filter: blur(6px);
-      border-bottom: 1px solid rgba(255,255,255,0.08);
-      flex-shrink: 0;
-    }
-    .stat-chip {
-      display: flex; align-items: center; gap: 4px;
-      background: rgba(255,255,255,0.1);
-      border: 1px solid rgba(255,255,255,0.18);
-      border-radius: 20px;
-      padding: 4px 10px;
-      font-size: 13px; font-weight: 700;
-      white-space: nowrap;
-    }
-    .stat-chip .icon { font-size: 15px; }
-    #xp-wrap {
-      flex: 1;
-      background: rgba(0,0,0,0.4);
-      border-radius: 10px; height: 10px;
-      overflow: hidden;
-      border: 1px solid rgba(255,255,255,0.1);
-    }
-    #xp-fill {
-      height: 100%;
-      width: 38%;
-      background: linear-gradient(90deg, #a8e063, #56ab2f);
-      border-radius: 10px;
-      transition: width .6s ease;
-    }
-    #weather-chip {
-      margin-left: auto;
-      background: rgba(100,200,255,0.15);
-      border-color: rgba(100,200,255,0.3);
-    }
-
-    /* ─── Crop Points Banner ─── */
-    #crop-banner {
-      display: flex; align-items: center; gap: 8px;
-      padding: 6px 14px;
-      background: rgba(0,0,0,0.3);
-      font-size: 12px;
-      overflow-x: auto;
-      flex-shrink: 0;
-      -webkit-overflow-scrolling: touch;
-    }
-    #crop-banner::-webkit-scrollbar { display: none; }
-    .crop-tag {
-      display: flex; align-items: center; gap: 4px;
-      background: rgba(255,255,255,0.08);
-      border-radius: 14px;
-      padding: 3px 10px;
-      white-space: nowrap;
-      font-size: 12px;
-      cursor: default;
-    }
-    .crop-tag .pts { color: #ffd54f; font-weight: 700; }
-
-    /* ─── Farm Scene ─── */
-    #farm-scene {
-      flex: 1;
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      padding: 10px 14px;
-      overflow: hidden;
-    }
-
-    /* Soil ground strip */
-    #ground-strip {
-      width: 100%;
-      background: linear-gradient(180deg, #5d4037 0%, #4e342e 100%);
-      border-radius: 16px;
-      padding: 14px 10px 10px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-      border: 2px solid #3e2723;
-    }
-
-    /* Grid */
-    #farm-grid {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 6px;
-    }
-    .cell {
-      aspect-ratio: 1;
-      background: radial-gradient(circle at 40% 35%, #795548, #4e342e);
-      border-radius: 10px;
-      border: 2px solid #6d4c41;
-      display: flex; align-items: center; justify-content: center;
-      font-size: clamp(20px, 5vw, 28px);
-      cursor: pointer;
-      position: relative;
-      transition: transform .15s, box-shadow .15s;
-      user-select: none;
-      -webkit-user-select: none;
-    }
-    .cell:active { transform: scale(.90); }
-    .cell.ready {
-      box-shadow: 0 0 10px 3px rgba(255,220,50,0.65);
-      border-color: #ffd54f;
-      animation: pulse-ready 1.2s ease-in-out infinite alternate;
-    }
-    @keyframes pulse-ready { from { box-shadow: 0 0 6px 2px rgba(255,220,50,.5); } to { box-shadow: 0 0 14px 5px rgba(255,220,50,.9); } }
-    .cell .timer-label {
-      position: absolute; bottom: 2px; left: 0; right: 0;
-      text-align: center;
-      font-size: 9px;
-      color: rgba(255,255,255,0.75);
-      pointer-events: none;
-    }
-    .cell .water-dot {
-      position: absolute; top: 3px; right: 4px;
-      width: 7px; height: 7px;
-      background: #4dd0e1;
-      border-radius: 50%;
-      box-shadow: 0 0 5px #4dd0e1;
-    }
-
-    /* ─── Action Row ─── */
-    #action-row {
-      display: flex; gap: 8px;
-      justify-content: center;
-      margin-top: 10px;
-      flex-shrink: 0;
-    }
-    .act-btn {
-      flex: 1; max-width: 80px;
-      padding: 10px 0;
-      border: none; border-radius: 14px;
-      font-size: 11px; font-weight: 700;
-      cursor: pointer;
-      display: flex; flex-direction: column; align-items: center; gap: 3px;
-      transition: transform .12s, filter .12s;
-      color: #fff;
-      text-shadow: 0 1px 3px rgba(0,0,0,0.4);
-    }
-    .act-btn:active { transform: scale(.90); filter: brightness(1.2); }
-    .act-btn .b-icon { font-size: 20px; }
-    #btn-water  { background: linear-gradient(145deg, #29b6f6, #0288d1); box-shadow: 0 4px 12px rgba(2,136,209,.5); }
-    #btn-harvest{ background: linear-gradient(145deg, #ffca28, #f9a825); box-shadow: 0 4px 12px rgba(249,168,37,.45); color: #3e2000; text-shadow: none; }
-    #btn-shop   { background: linear-gradient(145deg, #66bb6a, #388e3c); box-shadow: 0 4px 12px rgba(56,142,60,.5); }
-    #btn-qr     { background: linear-gradient(145deg, #ab47bc, #7b1fa2); box-shadow: 0 4px 12px rgba(123,31,162,.5); }
-    #btn-bag    { background: linear-gradient(145deg, #ff7043, #e64a19); box-shadow: 0 4px 12px rgba(230,74,25,.5); }
-
-    /* ─── Seed Tray ─── */
-    #seed-tray {
-      display: flex; gap: 8px;
-      justify-content: center;
-      overflow-x: auto;
-      padding: 8px 14px;
-      flex-shrink: 0;
-      -webkit-overflow-scrolling: touch;
-    }
-    #seed-tray::-webkit-scrollbar { display: none; }
-    .seed-btn {
-      display: flex; flex-direction: column; align-items: center; gap: 2px;
-      background: rgba(255,255,255,0.1);
-      border: 2px solid rgba(255,255,255,0.2);
-      border-radius: 14px;
-      padding: 8px 12px;
-      cursor: pointer;
-      font-size: 11px;
-      min-width: 58px;
-      transition: transform .13s, border-color .13s;
-      color: #e8f5e9;
-    }
-    .seed-btn:active { transform: scale(.88); }
-    .seed-btn.selected { border-color: #ffd54f; background: rgba(255,213,79,.18); }
-    .seed-btn .seed-icon { font-size: 22px; }
-    .seed-btn .seed-cost { color: #ffd54f; font-weight: 700; font-size: 10px; }
-
-    /* ─── Bottom Nav ─── */
-    #bottom-nav {
-      display: flex;
-      background: rgba(0,0,0,0.55);
-      backdrop-filter: blur(8px);
-      border-top: 1px solid rgba(255,255,255,0.08);
-      flex-shrink: 0;
-    }
-    .nav-btn {
-      flex: 1;
-      display: flex; flex-direction: column; align-items: center;
-      padding: 10px 0 8px;
-      background: none; border: none; cursor: pointer;
-      font-size: 10px; color: rgba(255,255,255,0.5);
-      transition: color .15s;
-    }
-    .nav-btn .nav-icon { font-size: 22px; }
-    .nav-btn.active { color: #a5d6a7; }
-    .nav-btn.active .nav-icon { filter: drop-shadow(0 0 5px #a5d6a7); }
-
-    /* ─── Shop Modal ─── */
-    #shop-overlay, #qr-overlay {
-      position: fixed; inset: 0; z-index: 100;
-      background: rgba(0,0,0,0.7);
-      display: none; align-items: flex-end; justify-content: center;
-    }
-    #shop-overlay.open, #qr-overlay.open { display: flex; }
-    .modal-sheet {
-      width: 100%; max-width: 430px;
-      background: #1b2e1c;
-      border-radius: 24px 24px 0 0;
-      padding: 0 0 24px;
-      animation: slideUp .3s ease;
-      max-height: 70dvh;
-      overflow-y: auto;
-    }
-    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-    .sheet-handle {
-      width: 40px; height: 4px;
-      background: rgba(255,255,255,0.25);
-      border-radius: 2px;
-      margin: 12px auto 6px;
-    }
-    .sheet-title {
-      text-align: center;
-      font-size: 16px; font-weight: 700;
-      padding: 4px 0 12px;
-      border-bottom: 1px solid rgba(255,255,255,0.1);
-    }
-    .shop-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
-      padding: 14px;
-    }
-    .shop-item {
-      background: rgba(255,255,255,0.07);
-      border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 14px;
-      display: flex; flex-direction: column; align-items: center; gap: 4px;
-      padding: 12px 6px 10px;
-      cursor: pointer;
-      transition: transform .12s, background .12s;
-    }
-    .shop-item:active { transform: scale(.92); background: rgba(255,255,255,0.14); }
-    .shop-item .si-icon { font-size: 28px; }
-    .shop-item .si-name { font-size: 11px; font-weight: 700; }
-    .shop-item .si-cost { font-size: 11px; color: #ffd54f; }
-    .shop-item .si-time { font-size: 10px; color: rgba(255,255,255,0.5); }
-
-    /* ─── QR Modal ─── */
-    #qr-box {
-      padding: 20px;
-      text-align: center;
-    }
-    #qr-placeholder {
-      width: 180px; height: 180px;
-      margin: 12px auto;
-      background: #fff;
-      border-radius: 12px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 60px;
-    }
-    #qr-user-name { font-size: 15px; font-weight: 700; margin-top: 10px; }
-    #qr-hint { font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 6px; }
-
-    /* ─── Toast ─── */
-    #toast {
-      position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px);
-      background: rgba(0,0,0,0.8);
-      color: #fff; font-size: 13px; font-weight: 600;
-      padding: 9px 20px;
-      border-radius: 20px;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity .25s, transform .25s;
-      z-index: 200;
-      white-space: nowrap;
-    }
-    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-
-    /* ─── Level-up banner ─── */
-    #levelup {
-      position: fixed; inset: 0; z-index: 300;
-      display: none; align-items: center; justify-content: center;
-      pointer-events: none;
-    }
-    #levelup.show { display: flex; }
-    #levelup-inner {
-      font-size: 36px; font-weight: 900;
-      background: linear-gradient(135deg, #ffd54f, #ff6f00);
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-      animation: popBounce .6s ease both;
-    }
-    @keyframes popBounce {
-      0%   { transform: scale(0); opacity: 0; }
-      60%  { transform: scale(1.2); opacity: 1; }
-      100% { transform: scale(1); }
-    }
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html,body{margin:0;width:100%;min-height:100%;background:#111;font-family:"Noto Sans TC","Microsoft JhengHei",Arial,sans-serif;overflow-x:hidden}.wrap{width:100vw;min-height:100vh;display:flex;justify-content:center;align-items:flex-start;background:#111}.game{position:relative;width:min(100vw,575px);height:calc(min(100vw,575px) * 1872 / 575);max-height:100vh;aspect-ratio:575/1872;background:url("assets/bg.jpg") center/cover no-repeat;overflow:hidden;box-shadow:0 0 30px rgba(0,0,0,.65);transform-origin:top center}.spark{position:absolute;width:5px;height:5px;border-radius:99px;background:rgba(255,242,110,.9);box-shadow:0 0 10px 4px rgba(255,230,85,.65);animation:twinkle 2.8s infinite ease-in-out}.spark:nth-child(1){left:17%;top:39%;animation-delay:.2s}.spark:nth-child(2){left:58%;top:44%;animation-delay:.8s}.spark:nth-child(3){left:86%;top:51%;animation-delay:1.1s}.spark:nth-child(4){left:31%;top:75%;animation-delay:1.6s}@keyframes twinkle{0%,100%{opacity:.25;transform:scale(.7)}50%{opacity:1;transform:scale(1.5)}}.member-card{position:absolute;left:7.5%;top:3.05%;width:85%;filter:drop-shadow(0 9px 8px rgba(0,0,0,.28));z-index:5}.sign{position:absolute;left:21%;top:38.5%;width:42%;filter:drop-shadow(0 16px 12px rgba(59,35,10,.28));z-index:6}.notice-dot{position:absolute;right:33%;top:38.3%;width:30px;height:30px;border-radius:50%;background:radial-gradient(circle at 35% 28%,#fff39a 0 10%,#ffae17 25%,#c8331b 70%);border:2px solid #ffd86a;color:#fff;font-weight:900;text-align:center;line-height:25px;text-shadow:0 2px 2px #73210f;box-shadow:0 3px 5px rgba(0,0,0,.25);z-index:8}.plot-grid{position:absolute;left:12.8%;top:53.7%;width:74.4%;display:grid;grid-template-columns:repeat(3,1fr);gap:2.2% 7.1%;z-index:4}.plot{position:relative;width:100%;aspect-ratio:1.15/1;border:0;background:transparent;padding:0}.plot img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 5px rgba(0,0,0,.25));transition:.16s}.plot:active img{transform:scale(.96)}.action-water{position:absolute;left:11%;top:81.3%;width:37%;z-index:9}.action-harvest{position:absolute;right:9%;top:79.2%;width:37%;z-index:9}.button-img{display:block;width:100%;filter:drop-shadow(0 8px 5px rgba(0,0,0,.25));transition:.14s}.button-img:active{transform:translateY(2px) scale(.98)}.bottom-nav{position:absolute;left:0;bottom:0;width:100%;z-index:10;filter:drop-shadow(0 -5px 10px rgba(0,0,0,.20))}.hotspot{position:absolute;border:0;background:transparent;cursor:pointer;z-index:20}.hotspot:active{background:rgba(255,255,255,.08)}.hs-card{left:7.5%;top:3%;width:85%;height:25%}.hs-shop{left:24%;top:38.7%;width:35%;height:3.2%}.hs-event{left:23%;top:42.2%;width:38%;height:3.2%}.hs-land{left:24%;top:45.8%;width:35%;height:3.1%}.hs-water{left:11%;top:81.3%;width:37%;height:6%}.hs-harvest{right:9%;top:79.2%;width:37%;height:6%}.nav-hit{bottom:0;height:6.8%;width:16.66%}.nav-home{left:0}.nav-farm{left:16.66%}.nav-bag{left:33.33%}.nav-reward{left:50%}.nav-me{left:66.66%}.nav-more{left:83.33%}.toast{position:absolute;left:50%;bottom:11%;transform:translateX(-50%) translateY(20px);background:rgba(47,74,40,.92);color:#fff7cb;padding:10px 16px;border-radius:999px;font-weight:700;box-shadow:0 6px 18px rgba(0,0,0,.25);opacity:0;pointer-events:none;z-index:99;transition:.25s}.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}@media (min-aspect-ratio:575/1872){.game{height:100vh;width:calc(100vh * 575 / 1872)}}
   </style>
 </head>
 <body>
+  <div class="wrap">
+    <main class="game" id="game">
+      <span class="spark"></span><span class="spark"></span><span class="spark"></span><span class="spark"></span>
 
-<!-- Sky -->
-<div id="sky">
-  <div class="cloud c1"></div>
-  <div class="cloud c2"></div>
-  <div class="cloud c3"></div>
-</div>
+      <img class="member-card" src="assets/member_card.png" alt="會員卡" />
+      <img class="sign" src="assets/sign.png" alt="功能木牌" />
+      <div class="notice-dot">1</div>
 
-<div id="wrap">
+      <section class="plot-grid" aria-label="農田">
+        <button class="plot" data-action="plot"><img src="assets/tile_empty.png" alt="空田地"></button>
+        <button class="plot" data-action="plot"><img src="assets/tile_empty.png" alt="空田地"></button>
+        <button class="plot" data-action="plot"><img src="assets/tile_empty.png" alt="空田地"></button>
+        <button class="plot" data-action="plot"><img src="assets/tile_fruit.png" alt="成熟作物"></button>
+        <button class="plot" data-action="plot"><img src="assets/tile_sprout2.png" alt="幼苗"></button>
+        <button class="plot" data-action="plot"><img src="assets/tile_sprout2.png" alt="幼苗"></button>
+        <button class="plot" data-action="plot"><img src="assets/tile_fruit.png" alt="成熟作物"></button>
+        <button class="plot" data-action="plot"><img src="assets/tile_grown.png" alt="成長作物"></button>
+        <button class="plot" data-action="plot"><img src="assets/tile_grown.png" alt="成長作物"></button>
+        <button class="plot" data-action="plot"><img src="assets/tile_fruit.png" alt="成熟作物"></button>
+        <button class="plot" data-action="plot"><img src="assets/tile_grown.png" alt="成長作物"></button>
+        <button class="plot" data-action="plot"><img src="assets/tile_grown.png" alt="成長作物"></button>
+      </section>
 
-  <!-- ── TOP BAR ── -->
-  <header id="top-bar">
-    <div class="stat-chip">
-      <span class="icon">⭐</span>
-      <span id="level-txt">Lv.3</span>
-    </div>
-    <div id="xp-wrap"><div id="xp-fill"></div></div>
-    <div class="stat-chip">
-      <span class="icon">🎫</span>
-      <span id="pts-txt">120</span>
-    </div>
-    <div class="stat-chip" id="weather-chip">
-      <span id="weather-txt">🌤 --°C</span>
-    </div>
-  </header>
+      <button class="hotspot hs-card" data-action="會員卡" aria-label="會員卡"></button>
+      <button class="hotspot hs-shop" data-action="商店街" aria-label="商店街"></button>
+      <button class="hotspot hs-event" data-action="活動廣場" aria-label="活動廣場"></button>
+      <button class="hotspot hs-land" data-action="新土地" aria-label="新土地"></button>
 
-  <!-- ── CROP EXCHANGE BANNER ── -->
-  <div id="crop-banner">
-    <span style="color:rgba(255,255,255,0.5);font-size:11px;white-space:nowrap">🌱 兌換：</span>
-    <div class="crop-tag">🍓 草莓 <span class="pts">+30pt</span></div>
-    <div class="crop-tag">🥕 紅蘿蔔 <span class="pts">+20pt</span></div>
-    <div class="crop-tag">🌽 玉米 <span class="pts">+25pt</span></div>
-    <div class="crop-tag">🍆 茄子 <span class="pts">+18pt</span></div>
-    <div class="crop-tag">🍅 番茄 <span class="pts">+22pt</span></div>
+      <button class="hotspot hs-water" data-action="澆水" aria-label="澆水"><img class="button-img" src="assets/btn_water.png" alt="澆水"></button>
+      <button class="hotspot hs-harvest" data-action="收成" aria-label="收成"><img class="button-img" src="assets/btn_harvest.png" alt="收成"></button>
+
+      <img class="bottom-nav" src="assets/bottom_nav.png" alt="底部導航" />
+      <button class="hotspot nav-hit nav-home" data-action="首頁" aria-label="首頁"></button>
+      <button class="hotspot nav-hit nav-farm" data-action="農場" aria-label="農場"></button>
+      <button class="hotspot nav-hit nav-bag" data-action="庫存" aria-label="庫存"></button>
+      <button class="hotspot nav-hit nav-reward" data-action="獎勵" aria-label="獎勵"></button>
+      <button class="hotspot nav-hit nav-me" data-action="我的" aria-label="我的"></button>
+      <button class="hotspot nav-hit nav-more" data-action="更多" aria-label="更多"></button>
+
+      <div class="toast" id="toast">UI 按鈕</div>
+    </main>
   </div>
-
-  <!-- ── FARM SCENE ── -->
-  <div id="farm-scene">
-    <div id="ground-strip">
-      <div id="farm-grid">
-        <!-- 15 cells: 3 rows × 5 cols — injected by JS -->
-      </div>
-    </div>
-
-    <!-- Action Buttons -->
-    <div id="action-row">
-      <button class="act-btn" id="btn-water"   onclick="doAction('water')">  <span class="b-icon">💧</span>澆水</button>
-      <button class="act-btn" id="btn-harvest" onclick="doAction('harvest')"><span class="b-icon">🌾</span>採收</button>
-      <button class="act-btn" id="btn-shop"    onclick="openShop()">         <span class="b-icon">🏪</span>商店</button>
-      <button class="act-btn" id="btn-bag"     onclick="doAction('bag')">    <span class="b-icon">🎒</span>庫存</button>
-      <button class="act-btn" id="btn-qr"      onclick="openQR()">           <span class="b-icon">📱</span>QR碼</button>
-    </div>
-  </div>
-
-  <!-- ── SEED TRAY ── -->
-  <div id="seed-tray">
-    <!-- injected by JS -->
-  </div>
-
-  <!-- ── BOTTOM NAV ── -->
-  <nav id="bottom-nav">
-    <button class="nav-btn active" onclick="navSwitch(this,'home')">  <span class="nav-icon">🏠</span>首頁</button>
-    <button class="nav-btn"        onclick="navSwitch(this,'farm')">  <span class="nav-icon">🌿</span>農場</button>
-    <button class="nav-btn"        onclick="navSwitch(this,'bag')">   <span class="nav-icon">🎒</span>庫存</button>
-    <button class="nav-btn"        onclick="navSwitch(this,'reward')"><span class="nav-icon">🎁</span>獎勵</button>
-    <button class="nav-btn"        onclick="navSwitch(this,'me')">    <span class="nav-icon">👤</span>我的</button>
-  </nav>
-
-</div><!-- #wrap -->
-
-<!-- ── SHOP MODAL ── -->
-<div id="shop-overlay" onclick="closeShop(event)">
-  <div class="modal-sheet" id="shop-sheet">
-    <div class="sheet-handle"></div>
-    <div class="sheet-title">🏪 種子商店</div>
-    <div class="shop-grid" id="shop-grid">
-      <!-- injected by JS -->
-    </div>
-  </div>
-</div>
-
-<!-- ── QR MODAL ── -->
-<div id="qr-overlay" onclick="closeQR(event)">
-  <div class="modal-sheet">
-    <div class="sheet-handle"></div>
-    <div class="sheet-title">📱 我的 QR Code</div>
-    <div id="qr-box">
-      <div id="qr-placeholder">🔲</div>
-      <div id="qr-user-name">農場會員</div>
-      <div id="qr-hint">請店員掃描此 QR Code<br>為您累積消費點數</div>
-    </div>
-  </div>
-</div>
-
-<!-- ── TOAST ── -->
-<div id="toast"></div>
-
-<!-- ── LEVEL-UP ── -->
-<div id="levelup"><div id="levelup-inner">🎉 升級！🎉</div></div>
-
-<script>
-  /* ─── Data ─── */
-  const SEEDS = [
-    { id:'strawberry', icon:'🍓', name:'草莓', cost:15, growMin:1,  pts:30 },
-    { id:'carrot',     icon:'🥕', name:'紅蘿蔔',cost:10, growMin:2, pts:20 },
-    { id:'corn',       icon:'🌽', name:'玉米',  cost:12, growMin:3, pts:25 },
-    { id:'eggplant',   icon:'🍆', name:'茄子',  cost:8,  growMin:4, pts:18 },
-    { id:'tomato',     icon:'🍅', name:'番茄',  cost:11, growMin:2, pts:22 },
-    { id:'pumpkin',    icon:'🎃', name:'南瓜',  cost:20, growMin:5, pts:40 },
-  ];
-
-  const STAGES = ['🟫','🌱','🌿','🌾'];  // empty→sprout1→sprout2→ready
-
-  let state = {
-    pts: 120,
-    level: 3,
-    xp: 38,          // percent
-    weather: '🌤 24°C',
-    selectedSeed: SEEDS[0],
-    cells: Array.from({length:15}, (_,i)=>{
-      // pre-seed a few demo cells
-      if(i===3)  return {stage:3, seed:SEEDS[0], watered:false};  // ready
-      if(i===6)  return {stage:2, seed:SEEDS[1], watered:true};
-      if(i===8)  return {stage:1, seed:SEEDS[2], watered:false};
-      return {stage:0, seed:null, watered:false};
-    })
-  };
-
-  /* ─── Render ─── */
-  function render(){
-    // top-bar
-    document.getElementById('level-txt').textContent = 'Lv.'+state.level;
-    document.getElementById('pts-txt').textContent   = state.pts;
-    document.getElementById('xp-fill').style.width   = state.xp+'%';
-    document.getElementById('weather-txt').textContent = state.weather;
-
-    // farm grid
-    const grid = document.getElementById('farm-grid');
-    grid.innerHTML = '';
-    state.cells.forEach((c,i)=>{
-      const div = document.createElement('div');
-      div.className = 'cell' + (c.stage===3?' ready':'');
-      div.innerHTML = cellEmoji(c);
-      if(c.watered && c.stage<3){
-        const dot = document.createElement('div');
-        dot.className='water-dot';
-        div.appendChild(dot);
-      }
-      div.addEventListener('click', ()=>onCellClick(i));
-      grid.appendChild(div);
+  <script>
+    const toast = document.getElementById('toast');
+    let timer = null;
+    document.querySelectorAll('[data-action]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const action = btn.dataset.action || '按鈕';
+        toast.textContent = action + '｜後台功能可接在這裡';
+        toast.classList.add('show');
+        clearTimeout(timer);
+        timer = setTimeout(() => toast.classList.remove('show'), 1100);
+      });
     });
-
-    // seed tray
-    const tray = document.getElementById('seed-tray');
-    tray.innerHTML = '';
-    SEEDS.forEach(s=>{
-      const btn = document.createElement('button');
-      btn.className = 'seed-btn'+(state.selectedSeed.id===s.id?' selected':'');
-      btn.innerHTML = `<span class="seed-icon">${s.icon}</span><span>${s.name}</span><span class="seed-cost">🎫${s.cost}</span>`;
-      btn.onclick = ()=>{ state.selectedSeed=s; render(); showToast('選擇：'+s.name); };
-      tray.appendChild(btn);
-    });
-  }
-
-  function cellEmoji(c){
-    if(c.stage===0) return '🟫';
-    if(c.stage===3) return (c.seed?.icon||'🌾')+'<div class="timer-label">採收！</div>';
-    const sprouts=['🌱','🌿'];
-    return sprouts[c.stage-1]||'🌱';
-  }
-
-  /* ─── Cell Click ─── */
-  function onCellClick(i){
-    const c = state.cells[i];
-    if(c.stage===0){
-      // plant
-      if(state.pts < state.selectedSeed.cost){ showToast('點數不足 💸'); return; }
-      state.pts -= state.selectedSeed.cost;
-      state.cells[i] = {stage:1, seed:state.selectedSeed, watered:false};
-      showToast('種下 '+state.selectedSeed.icon+' '+state.selectedSeed.name);
-      // simulate grow after a few seconds (demo)
-      scheduleGrow(i,1);
-    } else if(c.stage===3){
-      // harvest
-      state.pts += c.seed.pts;
-      addXP(12);
-      showToast('採收 '+c.seed.icon+' +'+c.seed.pts+'pt 🎉');
-      state.cells[i] = {stage:0, seed:null, watered:false};
-    } else {
-      showToast('還在生長中… '+STAGES[c.stage]);
-    }
-    render();
-  }
-
-  function scheduleGrow(i, stage){
-    if(stage >= 3) return;
-    setTimeout(()=>{
-      if(state.cells[i] && state.cells[i].stage===stage){
-        state.cells[i].stage = stage+1;
-        render();
-        if(state.cells[i].stage===3) showToast('🌾 作物成熟了！點擊採收');
-        else scheduleGrow(i, stage+1);
-      }
-    }, 4000 + stage*2000);  // 4s, 6s, 8s for demo
-  }
-
-  /* ─── Actions ─── */
-  function doAction(type){
-    if(type==='water'){
-      let watered=0;
-      state.cells.forEach(c=>{ if(c.stage>0 && c.stage<3 && !c.watered){ c.watered=true; watered++; } });
-      showToast(watered>0 ? '💧 澆水 '+watered+' 塊田' : '沒有需要澆水的田');
-      render();
-    } else if(type==='harvest'){
-      let count=0, ptsGained=0;
-      state.cells.forEach((c,i)=>{ if(c.stage===3){ ptsGained+=c.seed.pts; count++; addXP(12); state.cells[i]={stage:0,seed:null,watered:false}; } });
-      if(count>0){ state.pts+=ptsGained; showToast('🌾 採收 '+count+' 個，+'+ptsGained+'pt'); render(); }
-      else showToast('目前沒有可採收的作物');
-    } else if(type==='bag'){
-      showToast('🎒 庫存功能開發中');
-    }
-  }
-
-  function addXP(amount){
-    state.xp += amount;
-    if(state.xp >= 100){ state.xp -= 100; state.level++; triggerLevelUp(); }
-  }
-
-  function triggerLevelUp(){
-    const el = document.getElementById('levelup');
-    el.classList.add('show');
-    setTimeout(()=>el.classList.remove('show'), 2000);
-  }
-
-  /* ─── Shop ─── */
-  function openShop(){
-    const grid = document.getElementById('shop-grid');
-    grid.innerHTML = '';
-    SEEDS.forEach(s=>{
-      const div = document.createElement('div');
-      div.className = 'shop-item';
-      div.innerHTML = `<span class="si-icon">${s.icon}</span><span class="si-name">${s.name}</span><span class="si-cost">🎫 ${s.cost}</span><span class="si-time">⏱ ${s.growMin}min</span>`;
-      div.onclick = ()=>{ state.selectedSeed=s; closeShop(); showToast('選擇種子：'+s.name+' '+s.icon); render(); };
-      grid.appendChild(div);
-    });
-    document.getElementById('shop-overlay').classList.add('open');
-  }
-  function closeShop(e){
-    if(!e || e.target===document.getElementById('shop-overlay'))
-      document.getElementById('shop-overlay').classList.remove('open');
-  }
-
-  /* ─── QR ─── */
-  function openQR(){
-    document.getElementById('qr-overlay').classList.add('open');
-  }
-  function closeQR(e){
-    if(!e || e.target===document.getElementById('qr-overlay'))
-      document.getElementById('qr-overlay').classList.remove('open');
-  }
-
-  /* ─── Nav ─── */
-  function navSwitch(btn, tab){
-    document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');
-    if(tab!=='home' && tab!=='farm') showToast('🚧 '+btn.textContent.trim()+' 開發中');
-  }
-
-  /* ─── Toast ─── */
-  let _toastTimer=null;
-  function showToast(msg){
-    const t = document.getElementById('toast');
-    t.textContent = msg;
-    t.classList.add('show');
-    clearTimeout(_toastTimer);
-    _toastTimer = setTimeout(()=>t.classList.remove('show'), 1400);
-  }
-
-  /* ─── Init ─── */
-  render();
-</script>
+  </script>
 </body>
 </html>
