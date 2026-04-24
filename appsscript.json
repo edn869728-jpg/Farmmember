@@ -1,0 +1,1 @@
+{\n  "timeZone": "Asia/Taipei",\n  "dependencies": {},\n  "exceptionLogging": "STACKDRIVER",\n  "runtimeVersion": "V8",\n  "webapp": {\n    "executeAs": "USER_DEPLOYING",\n    "access": "ANYONE_ANONYMOUS"\n  }\n}\n
