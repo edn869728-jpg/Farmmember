@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>模擬農場 UI</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: #333;
+            font-family: "Microsoft JhengHei", sans-serif;
+            display: flex;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* 模擬手機容器 */
+        .phone-screen {
+            width: 100%;
+            max-width: 480px;
+            height: 100vh;
+            /* 修正背景路徑 */
+            background: url('assets/bg/bg_farm.jpg') center/cover;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            overflow: hidden;
+        }
+
+        /* 頂部：會員卡固定 */
+        .header {
+            flex-shrink: 0;
+            padding: 10px;
+            text-align: center;
+            z-index: 10;
+        }
+        .member-card {
+            width: 100%;
+            height: auto;
+        }
+
+        /* 中間：可捲動內容區 */
+        .scrollable-content {
+            flex: 1;
+            overflow-y: auto;
+            /* 增加頂部間距，讓田地往下移，解決漂浮感 */
+            padding-top: 80px; 
+            padding-bottom: 120px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* 木牌區：與會員卡拉開距離 */
+        .signboard-area {
+            width: 80%;
+            margin: 0 0 40px 0; /* 下方留 40px 給田地 */
+            text-align: center;
+        }
+        .signboard-area img {
+            width: 100%;
+            max-width: 250px;
+        }
+
+        /* 農田區 5x3 佈局 */
+        .farm {
+            width: 320px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px 10px; /* 增加上下行距 */
+        }
+        .plot {
+            width: 90px;
+            height: 90px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .plot img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        /* 操作按鈕 (澆水/收成) */
+        .actions {
+            width: 90%;
+            margin: 40px auto;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+        .actions button {
+            background: none;
+            border: none;
+            padding: 0;
+            cursor: pointer;
+        }
+        .actions img {
+            width: 130px;
+            height: auto;
+        }
+
+        /* 底部：固定導覽列 */
+        .bottom-nav {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 110px; /* 配合木頭背景高度 */
+            background: url('assets/ui/ui_navbar_full.png') no-repeat center bottom;
+            background-size: 100% auto;
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            padding-bottom: 15px; /* 調整圖標在木板上的垂直位置 */
+            z-index: 100;
+        }
+
+        .bottom-nav img {
+            height: auto;
+            cursor: pointer;
+            transition: transform 0.1s;
+            margin: 0 -2px; /* 讓圖標稍微靠攏 */
+        }
+
+        /* 針對你提供的寬度設定 */
+        .bottom-nav img:nth-child(1){ width: 112px; }
+        .bottom-nav img:nth-child(2){ width: 76px; }
+        .bottom-nav img:nth-child(3){ width: 73px; }
+        .bottom-nav img:nth-child(4){ width: 83px; }
+        .bottom-nav img:nth-child(5){ width: 97px; }
+        .bottom-nav img:nth-child(6){ width: 59px; }
+
+        .bottom-nav img:active { transform: scale(0.9); }
+
+        .scrollable-content::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="phone-screen">
+    <div class="header">
+        <img src="assets/ui/card_member_full.png" class="member-card" alt="會員卡">
+    </div>
+
+    <div class="scrollable-content">
+        <div class="signboard-area">
+            <img src="assets/sign/sign_shop.png" alt="看板">
+        </div>
+
+        <div class="farm" id="farm"></div>
+
+        <div class="actions">
+            <button><img src="assets/btn/btn_water.png" alt="澆水"></button>
+            <button><img src="assets/btn/btn_harvest.png" alt="收成"></button>
+        </div>
+    </div>
+
+    <div class="bottom-nav">
+        <img src="assets/ui/1.png" alt="首頁">
+        <img src="assets/ui/2.png" alt="農場">
+        <img src="assets/ui/3.png" alt="庫存">
+        <img src="assets/ui/4.png" alt="獎勵">
+        <img src="assets/ui/5.png" alt="我的">
+        <img src="assets/ui/6.png" alt="更多">
+    </div>
+</div>
+
+<script>
+    const farm = document.getElementById("farm");
+    for(let i=0; i<15; i++) {
+        const div = document.createElement("div");
+        div.className = "plot";
+        const img = document.createElement("img");
+        img.src = "assets/tile/tile_soil_empty.png";
+        div.appendChild(img);
+        farm.appendChild(div);
+    }
+</script>
+
+</body>
+</html>
