@@ -351,8 +351,18 @@ function handleGetWeather() {
 
     if (station) {
       const elem        = station.WeatherElement || {};
-      const temperature = parseFloat(elem.AirTemperature) || null;
-      const rainfall    = parseFloat(elem.Precipitation)  || 0;
+      // CWA O-A0003-001: AirTemperature is a top-level number; precipitation is
+      // nested under `Now.Precipitation` in the current schema. Support both
+      // current and legacy layouts so the call works either way.
+      const tempRaw     = (elem.AirTemperature !== undefined) ? elem.AirTemperature : null;
+      // Precipitation lives under `Now.Precipitation` in the current schema; fall back to legacy top-level field.
+      let rainRaw = (elem.Now && elem.Now.Precipitation !== undefined) ? elem.Now.Precipitation : undefined;
+      if (rainRaw === undefined) rainRaw = (elem.Precipitation !== undefined) ? elem.Precipitation : 0;
+      let temperature   = parseFloat(tempRaw);
+      let rainfall      = parseFloat(rainRaw);
+      if (!isFinite(temperature) || temperature < -50) temperature = null;
+      // CWA uses -99 / -991 etc. as "missing data" sentinels – treat as 0
+      if (!isFinite(rainfall) || rainfall < 0) rainfall = 0;
 
       result = {
         success:     true,

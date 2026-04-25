@@ -711,7 +711,14 @@ async function loadMemberFromBackend(lineUserId) {
     if (data.success && data.member) {
       const m = data.member;
       member.phone             = m.phone             || null;
-      member.points            = m.point             || m.points || member.points;
+      // Use explicit NaN check so a legitimate 0 is preserved (do not fall back to default 50)
+      let parsedPoints = NaN;
+      if (m.point !== undefined && m.point !== null && m.point !== '') {
+        parsedPoints = Number(m.point);
+      } else if (m.points !== undefined && m.points !== null && m.points !== '') {
+        parsedPoints = Number(m.points);
+      }
+      if (!isNaN(parsedPoints)) member.points = parsedPoints;
       member.cabbage_points    = m.cabbage_points    || 0;
       member.carrot_points     = m.carrot_points     || 0;
       member.corn_points       = m.corn_points       || 0;
@@ -797,9 +804,14 @@ async function submitPhone() {
 //  QR CODE MODAL
 // ─────────────────────────────────────────────
 function showQRModal() {
+  // Require a real LINE userId; refuse to show fake / placeholder QR
+  if (!member.lineUserId) {
+    showToast('請先以 LINE 登入後才能顯示會員 QR Code');
+    return;
+  }
   // Build (or refresh) QR code
   qrContainer.innerHTML = '';
-  const userId = member.lineUserId || 'DEMO_USER';
+  const userId = member.lineUserId;
 
   if (typeof QRCode !== 'undefined') {
     new QRCode(qrContainer, {
