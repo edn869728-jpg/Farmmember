@@ -34,13 +34,18 @@ def main():
             src = os.path.join(SCRIPT_DIR, original)
             dst = os.path.join(SCRIPT_DIR, final)
 
-            # 自動建立目標子目錄
-            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            # 自動建立目標子目錄（若 final_name 含子目錄路徑）
+            dst_dir = os.path.dirname(dst)
+            if dst_dir:
+                os.makedirs(dst_dir, exist_ok=True)
 
             if os.path.exists(src):
-                shutil.move(src, dst)
-                print(f"[OK]       {original}  →  {final}")
-                success += 1
+                if os.path.exists(dst):
+                    print(f"[SKIP]     {original}  →  {final}  (目標已存在)")
+                else:
+                    shutil.move(src, dst)
+                    print(f"[OK]       {original}  →  {final}")
+                    success += 1
             else:
                 print(f"[NOT FOUND] {original}")
                 not_found += 1
