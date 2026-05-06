@@ -1,0 +1,2363 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Farmmember</title>
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/barcodes/JsBarcode.code128.min.js"></script>
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+
+<style>
+:root{
+  --farm-top:60%;
+  --farm-left:10%;
+  --farm-width:88%;
+  --plot-ratio:1 / 0.88;
+
+  --member-info-top:3.65%;
+
+  --map-action-top:76.6%;
+  --map-action-bottom:21%;
+  --map-panel-top:79.4%;
+}
+
+*{
+  box-sizing:border-box;
+  margin:0;
+  padding:0;
+}
+
+html,
+body{
+  width:100%;
+  height:100%;
+  overflow:hidden;
+  background:#000000;
+  font-family:"Microsoft JhengHei",Arial,sans-serif;
+  color:#5b3518;
+}
+
+button{
+  font-family:inherit;
+}
+
+.app{
+  width:100%;
+  max-width:500px;
+  height:100vh;
+  margin:0 auto;
+  position:relative;
+  overflow:hidden;
+  background:#000000;
+}
+
+.scroll-area{
+  width:100%;
+  height: 105%;
+  overflow-y:auto;
+  overflow-x:hidden;
+  -webkit-overflow-scrolling:touch;
+  background:#000000;
+}
+
+.scroll-area::-webkit-scrollbar{
+  display:none;
+}
+
+.scene{
+  width:100%;
+  position:relative;
+  overflow:visible;
+  background:#000000;
+  margin-bottom:60px;
+}
+
+.bg-main{
+  width:100%;
+  height:auto;
+  display:block;
+  pointer-events:none;
+  transition:opacity .35s ease, filter .35s ease;
+}
+
+
+/* 天氣 / 時間效果層：只影響背景，不擋 UI */
+.weather-layer{
+  position:absolute;
+  inset:0;
+  z-index:3;
+  pointer-events:none;
+  overflow:hidden;
+}
+.weather-layer::before,
+.weather-layer::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+}
+.weather-layer.rain::before{
+  background-image:repeating-linear-gradient(120deg,rgba(255,255,255,.26) 0px,rgba(255,255,255,.26) 1.5px,transparent 1.5px,transparent 9px);
+  background-size:90px 140px;
+  animation:farmRainMove .42s linear infinite;
+  opacity:.62;
+}
+.weather-layer.heavy-rain::before{
+  background-image:repeating-linear-gradient(115deg,rgba(255,255,255,.34) 0px,rgba(255,255,255,.34) 2px,transparent 2px,transparent 7px);
+  background-size:85px 135px;
+  animation:farmRainMove .25s linear infinite;
+  opacity:.78;
+}
+@keyframes farmRainMove{from{background-position:0 0;}to{background-position:-120px 240px;}}
+.weather-layer.fog::before{
+  background:radial-gradient(circle at 22% 34%,rgba(255,255,255,.22),transparent 28%),radial-gradient(circle at 80% 28%,rgba(255,255,255,.16),transparent 30%),linear-gradient(to bottom,rgba(255,255,255,.12),rgba(255,255,255,.02) 45%,transparent);
+  filter:blur(6px);
+  opacity:.82;
+  animation:farmFogMove 8s ease-in-out infinite alternate;
+}
+@keyframes farmFogMove{from{transform:translateX(-2%);}to{transform:translateX(2%);}}
+.weather-layer.dark::after{
+  background:linear-gradient(to bottom,rgba(3,12,45,.52),rgba(0,10,36,.42) 45%,rgba(0,0,20,.36));
+}
+.weather-layer.midnight::after{
+  background:linear-gradient(to bottom,rgba(0,4,20,.72),rgba(0,8,28,.62) 45%,rgba(0,0,12,.58));
+}
+.weather-layer.hot::before{
+  background:radial-gradient(circle at 82% 12%,rgba(255,241,140,.42),transparent 18%),linear-gradient(to bottom,rgba(255,190,60,.20),rgba(255,230,110,.08) 50%,transparent);
+  animation:farmHeatPulse 2.4s ease-in-out infinite alternate;
+}
+.weather-layer.hot::after{
+  inset:16% 0 36%;
+  background:repeating-linear-gradient(0deg,rgba(255,255,255,.05) 0px,rgba(255,255,255,.05) 3px,transparent 3px,transparent 13px);
+  filter:blur(2px);
+  animation:farmHeatWave 1.8s ease-in-out infinite alternate;
+  opacity:.65;
+}
+@keyframes farmHeatPulse{from{opacity:.65;}to{opacity:.95;}}
+@keyframes farmHeatWave{from{transform:translateX(-4px) skewX(-1deg);}to{transform:translateX(5px) skewX(1deg);}}
+.weather-layer.lightning{animation:farmLightning 5s infinite;}
+@keyframes farmLightning{0%,86%,91%,100%{opacity:1;}87%{opacity:.35;}88%{opacity:1;}89%{opacity:.25;}90%{opacity:1;}}
+.weather-layer.lightning::after{
+  background:rgba(210,230,255,.25);
+  opacity:0;
+  animation:farmLightningFlash 5s infinite;
+}
+@keyframes farmLightningFlash{0%,86%,91%,100%{opacity:0;}87%{opacity:.9;}88%{opacity:.1;}89%{opacity:.75;}90%{opacity:0;}}
+
+/* 夜晚農田打光 */
+#farmNightLight{
+  position:absolute;
+  top:30%;
+  left:0%;
+  width:100%;
+  height:70%;
+  z-index:2;
+  pointer-events:none;
+  opacity:0;
+  transition:opacity 0.6s ease;
+  background:
+    radial-gradient(4px 4px at 0% 0%, rgba(255,250,180,1), transparent 5px),
+    conic-gradient(from 125deg at 0% 0%, transparent 0deg, rgba(255,210,70,.15) 8deg, rgba(255,210,70,.12) 50deg, transparent 58deg),
+    radial-gradient(4px 4px at 100% 0%, rgba(255,250,180,1), transparent 5px),
+    conic-gradient(from 180deg at 100% 0%, transparent 0deg, rgba(255,210,70,.15) 8deg, rgba(255,210,70,.12) 50deg, transparent 58deg);
+  animation:farmLightPulse 4s ease-in-out infinite alternate;
+}
+#farmNightLight.active{ opacity:1; }
+@keyframes farmLightPulse{
+  from{ opacity:.88; }
+  to{ opacity:1; }
+}
+
+/* 會員卡 */
+.member-card{
+  position:absolute;
+  top:0.5%;
+  left:10.2%;
+  width:80%;
+  z-index:5;
+}
+
+.member-info-layer{
+  position:absolute;
+  top:var(--member-info-top);
+  left:11.66%;
+  right:auto;
+  width:150%;
+  height:8%;
+  z-index:7;
+  display:grid;
+  grid-template-columns:18% 22% 24%;
+  align-items:center;
+  pointer-events:none;
+  color:#dcba67;
+  font-weight:1000;
+  -webkit-text-stroke: 0.5px currentColor;  /* 描邊加粗感 */
+}
+
+.avatar-box{
+  width:75%;
+  aspect-ratio:0.91/1;
+  border-radius:50%;
+  overflow:hidden;
+  background:transparent;
+  margin:0 auto;
+  margin: top 28px;
+}
+
+.avatar-box img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:block;
+}
+
+.member-text{
+  padding-left:3px;
+  padding-bottom:6px;
+  padding-top:1px;
+  line-height:1.35;
+  transform:translateY(-20px);
+}
+
+.member-name{
+  font-size:24px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  margin-top:10px;
+}
+
+.member-phone,
+.member-id{
+  font-size:20px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  margin-top:24px;
+}
+
+.member-level{
+  width: 95%;
+  height: 100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:visible;
+  transform:translate(-42px,-12px);
+}
+
+.member-level-img{
+  width:100%;
+  max-width: 55%;
+  height: 70%;
+  display:block;
+  object-fit:fill;
+  transform:translate(1px,-8px);
+}
+
+/* 會員卡下面長條空格：升級進度條 */
+.level-progress-slot{
+  position:absolute;
+  left:17.5%;
+  right:49.5%;
+  bottom: -15%;
+  height: 36%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:9;
+  transform:translateY(-13px);
+}
+
+.level-progress-img{
+  width:100%;
+  height:100%;
+  display:block;
+  object-fit:fill;
+}
+
+/* 點數條碼卡（已整合進會員卡，無需獨立圖片） */
+
+.point-info-layer{
+  position:absolute;
+  top:13.8%;
+  left:5.5%;
+  width:110%;
+  height:9.5%;
+  z-index:7;
+  pointer-events:none;
+  color:hwb(214 1% 77%);
+  font-weight:900;
+  font-size:20px;
+  -webkit-text-stroke: 0.5px currentColor;  /* 描邊加粗感 */
+}
+
+.balance{
+  position:absolute;
+  left:15%;
+  top:4%;
+}
+
+.bonus{
+  position:absolute;
+  left:15%;
+  top:35%;
+}
+
+.game-point{
+  position:absolute;
+  left:15%;
+  top: 67%;
+}
+
+.barcode{
+  position:absolute;
+  left:20%;
+  top:25.3%;
+  width:75%;
+  z-index:7;
+  min-height:34px;
+}
+
+.barcode svg{
+  width: 80%;
+  height:auto;
+  display:block;
+}
+
+.qrcode{
+  position:absolute;
+  right: 30.45%;
+  top:8px;
+  width:18%;
+  aspect-ratio:1/1;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  font-size:11px;
+  border:1px dashed rgba(139, 119, 104, 0.515);
+  color:#dcba67;
+  background:rgba(255,255,255,.18);
+  overflow:visible;
+}
+
+/* 天氣標籤：點數卡下方，天空位置靠左 */
+.weather-badge{
+  position:absolute;
+  top: 29.5%;
+  left: 12%;
+  z-index:8;
+  pointer-events:none;
+  display:flex;
+  align-items:center;
+  gap:3px;
+  background:rgba(0,0,0,.28);
+  border-radius:8px;
+  padding:0px 6px 0px 5px;
+  color:#38bade;
+  font-size:20px;
+  font-weight:900;
+  line-height:1.4;
+  letter-spacing:.5px;
+  text-shadow:0 1px 3px rgba(0,0,0,.6);
+  backdrop-filter:blur(4px);
+  -webkit-backdrop-filter:blur(4px);
+}
+.weather-badge-icon{
+  font-size:16px;
+  line-height:1;
+  flex-shrink:0;
+}
+.weather-badge-text-wrap{
+  display:flex;
+  flex-direction:column;
+  gap:0px;
+}
+.weather-badge-label{
+  color:#ffe566;
+  font-size:16px;
+  font-weight:700;
+  line-height:1.2;
+  letter-spacing:.3px;
+  text-shadow:0 0 8px rgba(238, 182, 29, 0.9), 0 0 18px rgba(255,180,0,.7), 0 1px 2px rgba(0,0,0,.5);
+}
+.weather-badge-desc{
+  color:#e8f4ff;
+  font-size:15px;
+  line-height:1.2;
+}
+.weather-badge-temp{
+  color:#ffd56b;
+  font-size:15px;
+  font-weight:900;
+}
+
+/* 路牌 */
+.road-sign{
+  position:absolute;
+  top:80%;
+  right:3%;
+  width:45%;
+  z-index:10;
+}
+
+.road-sign-img{
+  width:100%;
+  height:auto;
+  display:block;
+}
+
+.road-sign-buttons{
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+}
+
+.road-sign-btn{
+  position:absolute;
+  left:8%;
+  width:82%;
+  height:22%;
+  border:0;
+  background:transparent;
+  pointer-events:auto;
+}
+
+.road-sign-btn.top{ top:8%; }
+.road-sign-btn.middle{ top:27%; }
+.road-sign-btn.bottom{ top:51%; }
+
+/* 修改這部分 */
+.farm-map-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 100; /* 從 20 提高到 100，確保在光(z:2)之上 */
+  pointer-events: none;
+}
+
+/* 農地：4 欄 × 5 列，共 20 格 */
+.farm{
+  position:absolute;
+  top:50%;
+  left:6%;
+  width:88%;
+  z-index:1;
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:0px 0px;
+  pointer-events:auto;
+}
+
+.plot{
+  position:relative;
+  width:100%;
+  margin:0 auto;
+  aspect-ratio:var(--plot-ratio);
+}
+
+.plot img{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  display:block;
+}
+
+.plot-progress{
+  position:absolute;
+  left:18%;
+  right:18%;
+  bottom:2%;
+  height:8px;
+  border-radius:999px;
+  background:rgba(0,0,0,.25);
+  overflow:hidden;
+}
+
+.plot-progress span{
+  display:block;
+  height:100%;
+  background:rgba(105,190,70,.85);
+  width:0%;
+}
+
+/* 地圖上的功能按鈕：澆水 / 收成 */
+.map-actions{
+  position:absolute;
+  top:85%;
+  left:12%;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:24px;
+  z-index:22;
+  pointer-events:auto;
+  width:33.6%;
+}
+
+.map-action-btn.water-btn{
+  margin-left: -20px;
+}
+
+.map-action-btn{
+  border:0;
+  background:transparent;
+  padding:0;
+  width:100%;
+  max-width:316px;
+  display:block;
+}
+
+.map-action-btn img{
+  width:100%;
+  height:auto;
+  display:block;
+}
+
+.map-action-btn:active{
+  transform:scale(.96);
+}
+
+/* 面板遮罩 */
+.panel-overlay{
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.48);
+  z-index:44;
+}
+.panel-overlay.active{
+  display:block;
+}
+
+/* 地圖上的資訊面板：整張浮在中間，底部留給導航欄 */
+.map-panel-wrap{
+  position:fixed;
+  top:6%;
+  bottom:72px;        /* 導航欄高度 */
+  left:50%;
+  transform:translateX(-50%);
+  width:92%;
+  max-width:460px;
+  z-index:45;
+  pointer-events:none;
+  display:none;
+}
+.map-panel-wrap.active{
+  display:block;
+}
+
+.map-panel{
+  display:none;
+  width:100%;
+  height:100%;        /* 撐滿 wrap 的高度 */
+  overflow-y:auto;
+  pointer-events:auto;
+  background:#fdf5e8;
+  border:1px solid rgba(255,255,255,.8);
+  box-shadow:0 12px 40px rgba(54,35,12,.2);
+  border-radius:20px;
+  padding:12px;
+}
+
+.map-panel.active{
+  display:block;
+}
+
+.map-panel-close{
+  display:block;
+  width:100%;
+  border:0;
+  background:rgba(0,0,0,.08);
+  border-radius:12px;
+  padding:8px;
+  font-size:13px;
+  font-weight:900;
+  color:#5b3518;
+  margin-top:8px;
+  cursor:pointer;
+}
+.map-panel-close:active{ opacity:.7; }
+
+.map-panel::-webkit-scrollbar{
+  display:none;
+}
+
+.map-panel-title{
+  font-size:13px;
+  font-weight:900;
+  margin-bottom:6px;
+}
+
+.map-panel-sub{
+  font-size:11px;
+  line-height:1.45;
+  margin-bottom:6px;
+}
+
+.map-mini-card{
+  background:rgba(255,255,255,.62);
+  border-radius:12px;
+  padding:8px;
+  margin-top:6px;
+  font-size:12px;
+  line-height:1.45;
+  font-weight:800;
+}
+
+.inv-row,
+.shop-row,
+.reward-row,
+.my-row{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:6px;
+  margin-top:6px;
+}
+
+.inv-item,
+.shop-item,
+.reward-item,
+.my-item{
+  background:rgba(255,255,255,.92);
+  border-radius:12px;
+  padding:7px;
+  font-size:11px;
+  line-height:1.4;
+  font-weight:800;
+}
+
+.inv-head,
+.shop-head,
+.reward-head{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  margin-bottom:4px;
+}
+
+.inv-head img,
+.shop-head img,
+.reward-head img{
+  width:34px;
+  height:34px;
+  object-fit:contain;
+}
+
+.inv-actions,
+.shop-actions,
+.reward-actions{
+  display:flex;
+  gap:6px;
+  margin-top:5px;
+}
+
+.small-btn{
+  flex:1;
+  border:0;
+  border-radius:10px;
+  background:#fff3cb;
+  color:#5b3518;
+  font-size:11px;
+  font-weight:900;
+  padding:6px 4px;
+}
+
+.small-btn.primary{
+  background:#ffd46e;
+}
+
+.small-btn.green{
+  background:#bce78e;
+}
+
+.small-btn.disabled,
+.small-btn:disabled{
+  opacity:.45;
+}
+
+.summary-list{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:6px;
+  margin-top:6px;
+}
+
+.summary-item{
+  background:rgba(255,255,255,.92);
+  border-radius:12px;
+  padding:7px;
+  font-size:11px;
+  line-height:1.4;
+  font-weight:800;
+}
+
+/* 導航：貼地圖底部，跟著地圖一起捲 */
+.map-nav{
+  position:fixed;
+  left:50%;
+  bottom:0;
+  top:auto;
+  transform:translateX(-50%);
+  width:100%;
+  max-width:500px;
+  z-index:8000;
+  pointer-events:auto;
+}
+
+.map-nav-bg{
+  width:100%;
+  display:block;
+  pointer-events:none;
+}
+
+.map-nav-buttons{
+  position:absolute;
+  left:0;
+  bottom:0;
+  width:100%;
+  height:90%;
+  display:grid;
+  grid-template-columns:repeat(6,1fr);
+}
+
+.map-nav-btn{
+  border:0;
+  background:rgba(255,255,255,0);
+  width:100%;
+  height:100%;
+  display:block;
+}
+
+.map-nav-btn:active{
+  transform:scale(.96);
+}
+
+/* 提示訊息 */
+.msg{
+  position:fixed;
+  left:50%;
+  bottom:16px;
+  transform:translateX(-50%);
+  width:calc(100vw - 28px);
+  max-width:472px;
+  background:rgba(0,0,0,.75);
+  color:#fff;
+  border-radius:14px;
+  padding:10px 12px;
+  font-size:14px;
+  text-align:center;
+  z-index:2000;
+  display:none;
+}
+
+/* 種植選擇器 */
+.plant-picker{
+  position:fixed;
+  inset:0;
+  z-index:300;
+  background:rgba(0,0,0,.55);
+  display:none;
+  align-items:flex-end;
+  justify-content:center;
+}
+.plant-picker.active{ display:flex; }
+.plant-picker-box{
+  width:100%;
+  max-width:500px;
+  background:#fdf3e1;
+  border-radius:20px 20px 0 0;
+  padding:16px;
+  max-height:65vh;
+  overflow-y:auto;
+}
+.plant-picker-title{
+  font-size:15px;
+  font-weight:900;
+  margin-bottom:10px;
+  color:#5b3518;
+}
+.plant-picker-grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:8px;
+}
+.plant-picker-item{
+  background:rgba(255,255,255,.7);
+  border-radius:12px;
+  padding:8px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.plant-picker-item img{ width:40px; height:40px; object-fit:contain; }
+.plant-picker-info{
+  flex:1;
+  font-size:12px;
+  font-weight:800;
+  color:#5b3518;
+  line-height:1.5;
+}
+.plant-picker-btn{
+  border:0;
+  background:#ffd46e;
+  border-radius:10px;
+  font-size:12px;
+  font-weight:900;
+  padding:6px 10px;
+  color:#5b3518;
+  cursor:pointer;
+}
+.plant-picker-btn:disabled{ opacity:.4; }
+.plant-picker-cancel{
+  margin-top:10px;
+  width:100%;
+  border:0;
+  background:#e8d8c0;
+  border-radius:12px;
+  padding:10px;
+  font-size:14px;
+  font-weight:900;
+  color:#5b3518;
+  cursor:pointer;
+}
+
+@media (max-height:720px){
+  .map-panel{
+    max-height:60vh;
+    padding:7px;
+  }
+
+  .map-panel-title{
+    font-size:12px;
+  }
+
+  .map-panel-sub,
+  .map-mini-card,
+  .summary-item,
+  .shop-item,
+  .inv-item,
+  .reward-item,
+  .my-item{
+    font-size:11px;
+  }
+
+  .map-actions{
+    width:33.6%;
+  }
+}
+</style>
+</head>
+
+<body>
+<div class="app">
+  <div class="scroll-area" id="scrollArea">
+    <div class="scene" id="scene">
+      <img
+        class="bg-main"
+        id="bgMain"
+        src="https://pub-e41c0e5930434282a405e422bcc59113.r2.dev/FARM%20Game%20UI/bgs/01_farm_morning.png"
+      >
+      <div class="weather-layer" id="weatherLayer"></div>
+      <img
+        class="member-card"
+        src="https://pub-e41c0e5930434282a405e422bcc59113.r2.dev/MemberAndPointCard.png"
+        onclick="onMemberCardClick()"
+        style="cursor:pointer;"
+      >
+
+      <div class="member-info-layer">
+        <div class="avatar-box" id="memberAvatar"></div>
+
+        <div class="member-text">
+          <div class="member-name" id="memberName">載入中</div>
+          <div class="member-phone" id="memberPhone">---</div>
+        </div>
+
+        <div class="member-level">
+          <img
+            id="memberLevelImg"
+            class="member-level-img"
+            src="https://pub-e41c0e5930434282a405e422bcc59113.r2.dev/FARM%20Game%20UI//lEVELsplit_1.png"
+            alt="Lv.1"
+          >
+        </div>
+
+        <div class="level-progress-slot">
+          <img
+            id="levelProgressImg"
+            class="level-progress-img"
+            src="https://pub-e41c0e5930434282a405e422bcc59113.r2.dev/FARM%20Game%20UI/%E7%AD%89%E7%B4%9A%E9%80%B2%E5%BA%A6%E6%A2%9D0%25.png"
+            alt="升級進度 0%"
+          >
+        </div>
+      </div>
+
+      <div class="point-info-layer">
+        <div class="balance" id="memberBalance">儲值金：$0</div>
+        <div class="bonus" id="memberBonus">紅利金：0</div>
+        <div class="game-point" id="memberPoint">遊戲點：0</div>
+        <div class="qrcode" id="qrcodeWrap">
+          <div id="qrcode">QR</div>
+        </div>
+        <div id="qrcodeId" style="position:absolute;right:30.85%;top:77.4%;width:18%;z-index:8;font-size:16px;color:#dcba67;font-weight:900;text-align:center;letter-spacing:0.5px;line-height:1.2;transform:translateX(2px);"></div>
+      </div>
+
+      <div class="barcode" id="barcode"><svg id="barcodeSvg"></svg></div>
+
+        <div id="lineUserIdDebug" style="position:absolute;left:50%;bottom:8.8%;transform:translateX(-50%);width:78%;z-index:14;font-size:10px;color:rgba(255,240,200,.88);text-align:center;letter-spacing:0.3px;line-height:1.25;word-break:break-all;pointer-events:none;">
+          LINE ID：讀取中
+        </div>
+
+      <div class="weather-badge" id="weatherBadge">
+        <span id="weatherBadgeText">載入中...</span>
+      </div>
+
+      <div class="road-sign">
+        <img class="road-sign-img" src="https://pub-e41c0e5930434282a405e422bcc59113.r2.dev/FARM%20Game%20UI/%E6%9C%AA%E5%91%BD%E5%90%8D%E8%A8%AD%E8%A8%88%20(31).png" alt="路牌">
+        <div class="road-sign-buttons">
+          <button class="road-sign-btn top" type="button" aria-label="路牌上" onclick="navClick('farm')"></button>
+          <button class="road-sign-btn middle" type="button" aria-label="路牌中" onclick="navClick('shop')"></button>
+          <button class="road-sign-btn bottom" type="button" aria-label="路牌下" onclick="navClick('reward')"></button>
+        </div>
+      </div>
+
+      <div class="farm-map-layer">
+        <div id="farmNightLight"></div>
+        <div class="farm" id="farm"></div>
+
+        <div class="map-actions">
+          <button class="map-action-btn water-btn" type="button" onclick="farmWater()">
+            <img src="https://pub-e41c0e5930434282a405e422bcc59113.r2.dev/FARM%20Game%20UI/%E6%BE%86%E6%B0%B4.png" alt="澆水">
+          </button>
+
+          <button class="map-action-btn" type="button" onclick="setMode('harvest')">
+            <img src="https://pub-e41c0e5930434282a405e422bcc59113.r2.dev/FARM%20Game%20UI/%E6%94%B6%E6%88%90.png" alt="收成">
+          </button>
+        </div>
+
+        <div class="map-panel-wrap" id="mapPanelWrap">
+          <div class="map-panel" id="panelFarm">
+            <div class="map-panel-title">農場概況</div>
+            <div class="map-panel-sub">
+              目前模式：<span id="modeText">種植</span>｜
+              選取種子：<span id="cropText">西瓜</span>｜
+              天氣：<span id="weatherText">無雨 / 25°C</span>
+            </div>
+            <div class="summary-list" id="farmSummary"></div>
+            <button class="map-panel-close" onclick="setActivePanel('')">關閉</button>
+          </div>
+
+          <div class="map-panel" id="panelShop">
+            <div class="map-panel-title">商店 / 品項</div>
+            <div class="map-panel-sub">可直接購買種子，購買後會進入農場庫存，並顯示目前擁有數量。</div>
+            <div class="shop-row" id="shopList"></div>
+            <button class="map-panel-close" onclick="setActivePanel('')">關閉</button>
+          </div>
+
+          <div class="map-panel" id="panelReward">
+            <div class="map-panel-title">獎勵 / 兌換券</div>
+            <div class="map-panel-sub">每種作物收集 20 章可兌換 1 張對應兌換券。</div>
+            <div class="reward-row" id="rewardList"></div>
+            <button class="map-panel-close" onclick="setActivePanel('')">關閉</button>
+          </div>
+
+          <div class="map-panel" id="panelMy">
+            <div class="map-panel-title">我的</div>
+            <div class="my-row" id="myCard"></div>
+            <button class="map-panel-close" onclick="setActivePanel('')">關閉</button>
+          </div>
+
+          <div class="map-panel" id="panelMore">
+            <div class="map-panel-title">更多</div>
+            <div class="map-mini-card" id="moreCard"></div>
+            <button class="map-panel-close" onclick="setActivePanel('')">關閉</button>
+          </div>
+
+          <div class="map-panel" id="panelPhone">
+            <div class="map-panel-title">📱 綁定會員資料</div>
+            <div class="map-panel-sub">請輸入您的手機號碼，系統將自動比對舊有會員資料并綁定。</div>
+            <div style="padding:12px 4px;">
+              <input
+                id="phoneInput"
+                type="tel"
+                placeholder="輸入手機號碼（如 0912345678）"
+                style="width:100%;padding:10px 12px;font-size:16px;border-radius:10px;border:1.5px solid #c8a96e;background:#fffdf5;color:#3a1f00;box-sizing:border-box;"
+              />
+              <div id="phoneMsg" style="color:#c00;font-size:13px;min-height:18px;margin-top:6px;"></div>
+              <button
+                onclick="submitPhone()"
+                style="margin-top:10px;width:100%;padding:12px;background:#c8a96e;color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;"
+              >確認綁定</button>
+            </div>
+            <button class="map-panel-close" onclick="setActivePanel('')">取消</button>
+          </div>
+        </div>
+
+        <div class="map-nav">
+          <img
+            class="map-nav-bg"
+            src="https://pub-e41c0e5930434282a405e422bcc59113.r2.dev/FARM%20Game%20UI/%E5%B0%8E%E8%88%AA%E9%88%951500%E4%B9%98300.png"
+            alt="導航"
+          >
+          <div class="map-nav-buttons">
+            <button class="map-nav-btn" type="button" aria-label="首頁" onclick="navClick('home')"></button>
+            <button class="map-nav-btn" type="button" aria-label="農場" onclick="navClick('farm')"></button>
+            <button class="map-nav-btn" type="button" aria-label="商店" onclick="navClick('shop')"></button>
+            <button class="map-nav-btn" type="button" aria-label="獎勵" onclick="navClick('reward')"></button>
+            <button class="map-nav-btn" type="button" aria-label="我的" onclick="navClick('my')"></button>
+            <button class="map-nav-btn" type="button" aria-label="更多" onclick="navClick('more')"></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel-overlay" id="panelOverlay" onclick="setActivePanel('')"></div>
+
+<div class="plant-picker" id="plantPicker" onclick="pickerBackdropClick(event)">
+  <div class="plant-picker-box">
+    <div class="plant-picker-title">選擇要種的作物</div>
+    <div class="plant-picker-grid" id="plantPickerGrid"></div>
+    <button class="plant-picker-cancel" onclick="closePlantPicker()">取消</button>
+  </div>
+</div>
+
+<div class="msg" id="msg"></div>
+
+<script>
+const BASE = "https://pub-e41c0e5930434282a405e422bcc59113.r2.dev/FARM%20Game%20UI/";
+const FARM_TOTAL = 20;
+const REWARD_NEED = 20;
+
+// 無頭貼時顯示的預設人像（R2 CDN 頭像圖）
+const _DEFAULT_AVATAR_URL = 'https://pub-e41c0e5930434282a405e422bcc59113.r2.dev/FARM%20Game%20UI/bgs/%E9%A0%AD%E5%83%8F.png';
+window._defaultAvatar = '<img src="' + _DEFAULT_AVATAR_URL + '" alt="預設頭像" style="width:100%;height:100%;object-fit:cover;display:block;">';
+
+const STORE_INFO = {
+  name:"食便宜蔬果商行",
+  address:"南投縣埔里鎮中正路639號",
+  phone:"0972-378-856",
+  hours:"每週二至週日 8:00-19:00（週一公休）",
+};
+
+const DEFAULT_CROPS = {
+  cabbage:{name:"高麗菜", key:"cabbage", cost:5, unlockLevel:1},
+  carrot:{name:"胡蘿蔔", key:"carrot", cost:6, unlockLevel:1},
+  corn:{name:"玉米", key:"corn", cost:8, unlockLevel:2},
+  watermelon:{name:"西瓜", key:"watermelon", cost:10, unlockLevel:1},
+  strawberry:{name:"草莓", key:"strawberry", cost:12, unlockLevel:3}
+};
+
+let APP = {
+  line_user_id:"",
+  line_name:"",
+  member:null,
+  farm:null,
+  crops:{},
+  offers:{},
+  inventory:{},
+  selectedCrop:"watermelon",
+  mode:"plant",
+  activePanel:"",
+  localMode:false
+};
+
+function getParam(name){
+  return new URLSearchParams(location.search).get(name) || "";
+}
+
+function showMsg(text){
+  const el = document.getElementById("msg");
+  el.textContent = text;
+  el.style.display = "block";
+  clearTimeout(window.__msgTimer);
+  window.__msgTimer = setTimeout(function(){
+    el.style.display = "none";
+  }, 2200);
+}
+
+const GAS_URL = "https://script.google.com/macros/s/AKfycbxqw4AVgCxIntsie8JgehiUzpn-Ihzb8rLlFko1vTLEDv8C-x1dmc0GLFJY1U-8TjZqLQ/exec";
+
+function api(action,payload){
+  payload = payload || {};
+  payload.action = action;
+
+  return new Promise(function(resolve){
+    function requestOnce(attempt){
+      const controller = new AbortController();
+      let timedOut = false;
+
+      const timer = setTimeout(function(){
+        timedOut = true;
+        controller.abort();
+      }, 25000);
+
+      fetch(GAS_URL, {
+        method: "POST",
+        signal: controller.signal,
+        headers: {
+          "Content-Type": "text/plain;charset=utf-8"
+        },
+        body: JSON.stringify(payload)
+      })
+      .then(function(r){
+        return r.text();
+      })
+      .then(function(text){
+        clearTimeout(timer);
+
+        try{
+          resolve(JSON.parse(text));
+        }catch(err){
+          resolve({
+            ok:false,
+            message:"後端回傳不是 JSON，請確認 GAS 是否部署為 Web App / exec 網址是否正確",
+            raw:text ? text.slice(0, 300) : ""
+          });
+        }
+      })
+      .catch(function(err){
+        clearTimeout(timer);
+
+        // GAS 冷啟動或暫時網路抖動時，自動重試一次
+        if (attempt < 2) {
+          requestOnce(attempt + 1);
+          return;
+        }
+
+        if (timedOut) {
+          resolve({
+            ok:false,
+            message:"API 逾時（已重試 1 次），請稍後再試"
+          });
+          return;
+        }
+
+        resolve({
+          ok:false,
+          message: err && err.message ? err.message : String(err)
+        });
+      });
+    }
+
+    requestOnce(1);
+  });
+}
+
+function stageName(stage){
+  return ["seed","sprout","young","grow","harvest","dead"][stage] || "seed";
+}
+
+function cropItemSrc(key){
+  return BASE + key + "_item.png";
+}
+
+function cropStageSrc(crop,stage){
+  if(!crop || stage < 0) return BASE + "empty%20ground.png";
+  if(stage >= 5) return BASE + crop + "_stage_5_dead.png";
+  return BASE + crop + "_stage_" + stage + "_" + stageName(stage) + ".png";
+}
+
+function levelImgSrc(level){
+  level = Number(level || 1);
+  if(isNaN(level) || level < 1) level = 1;
+  if(level > 18) level = 18;
+  return BASE + "/lEVELsplit_" + level + ".png";
+}
+
+function levelNeed(level){
+  level = Number(level || 1);
+  if(isNaN(level) || level < 1) level = 1;
+  return 20 + ((level - 1) * 5);
+}
+
+function levelProgressPercent(){
+  const f = APP.farm || {};
+  const lv = Number(f.level || 1);
+  // 使用與後端一致的 xp 制：每級需 level*100 xp
+  let xp = Number(f.xp || 0);
+  let l = 1;
+  while (l < lv) {
+    xp -= l * 100;
+    l++;
+  }
+  xp = Math.max(0, xp);
+  const need = lv * 100;
+  return Math.max(0, Math.min(100, Math.floor(xp / need * 100)));
+}
+
+function levelProgressImgSrc(percent){
+  percent = Number(percent || 0);
+  if(isNaN(percent)) percent = 0;
+
+  let step = 0;
+  if(percent >= 100) step = 100;
+  else if(percent >= 80) step = 80;
+  else if(percent >= 60) step = 60;
+  else if(percent >= 40) step = 40;
+  else if(percent >= 20) step = 20;
+
+  return BASE + "%E7%AD%89%E7%B4%9A%E9%80%B2%E5%BA%A6%E6%A2%9D" + step + "%25.png";
+}
+
+function normalizeFarm(){
+  if(!APP.farm) APP.farm = {};
+
+  if(!Array.isArray(APP.farm.plots)){
+    APP.farm.plots = [];
+  }
+
+  while(APP.farm.plots.length < FARM_TOTAL){
+    APP.farm.plots.push({});
+  }
+
+  if(APP.farm.plots.length > FARM_TOTAL){
+    APP.farm.plots = APP.farm.plots.slice(0, FARM_TOTAL);
+  }
+
+  if(!APP.farm.level){
+    APP.farm.level = 1;
+  }
+
+  if(APP.farm.levelHarvestCount === undefined){
+    APP.farm.levelHarvestCount = 0;
+  }
+
+  if(APP.farm.levelNeed === undefined){
+    APP.farm.levelNeed = levelNeed(APP.farm.level);
+  }
+
+  if(!APP.farm.harvestCount && APP.farm.harvests){
+    APP.farm.harvestCount = APP.farm.harvests;
+  }
+
+  if(!APP.farm.harvestCount){
+    APP.farm.harvestCount = {};
+  }
+
+  if(!APP.farm.rewardStamps){
+    APP.farm.rewardStamps = {};
+  }
+
+  if(!APP.farm.coupons){
+    APP.farm.coupons = {};
+  }
+
+  if(!APP.farm.weather){
+    APP.farm.weather = {
+      text:"無雨",
+      tempC:25,
+      rainMm:0
+    };
+  }
+
+  if(!APP.inventory || typeof APP.inventory !== "object"){
+    APP.inventory = {};
+  }
+
+  const sourceInv = APP.farm.seedInventory || APP.farm.inventory || APP.farm.seeds || {};
+  Object.keys(DEFAULT_CROPS).forEach(function(key){
+    if(APP.inventory[key] === undefined){
+      APP.inventory[key] = Number(sourceInv[key] || 0);
+    }
+    if(APP.farm.harvestCount[key] === undefined){
+      APP.farm.harvestCount[key] = 0;
+    }
+    if(APP.farm.rewardStamps[key] === undefined){
+      APP.farm.rewardStamps[key] = Number(APP.farm.harvestCount[key] || 0);
+    }
+    if(APP.farm.coupons[key] === undefined){
+      APP.farm.coupons[key] = 0;
+    }
+  });
+}
+
+function setMode(mode){
+  APP.mode = mode;
+  const modeText = document.getElementById("modeText");
+  if(modeText){
+    modeText.textContent = mode === "harvest" ? "收成" : "種植";
+  }
+}
+
+function setActivePanel(panel){
+  APP.activePanel = panel || "";
+
+  const ids = [
+    "panelFarm",
+    "panelShop",
+    "panelReward",
+    "panelMy",
+    "panelMore",
+    "panelPhone"
+  ];
+
+  ids.forEach(function(id){
+    const el = document.getElementById(id);
+    if(el) el.classList.remove("active");
+  });
+
+  const wrap = document.getElementById("mapPanelWrap");
+  const overlay = document.getElementById("panelOverlay");
+
+  if(!panel){
+    if(wrap) wrap.classList.remove("active");
+    if(overlay) overlay.classList.remove("active");
+    return;
+  }
+
+  const activeIdMap = {
+    farm:"panelFarm",
+    shop:"panelShop",
+    reward:"panelReward",
+    my:"panelMy",
+    more:"panelMore",
+    phone:"panelPhone"
+  };
+
+  const activeEl = document.getElementById(activeIdMap[panel] || "");
+  if(activeEl) activeEl.classList.add("active");
+  if(wrap) wrap.classList.add("active");
+  if(overlay) overlay.classList.add("active");
+}
+
+function navClick(type){
+  if(type === "home"){
+    setActivePanel("");
+    const sc = document.getElementById("scrollArea");
+    sc.scrollTo({ top:0, behavior:"smooth" });
+    return;
+  }
+
+  if(type === "farm"){
+    setActivePanel("farm");
+    return;
+  }
+
+  if(type === "shop"){
+    setActivePanel("shop");
+    return;
+  }
+
+  if(type === "reward"){
+    setActivePanel("reward");
+    return;
+  }
+
+  if(type === "my"){
+    setActivePanel("my");
+    return;
+  }
+
+  if(type === "more"){
+    setActivePanel("more");
+    return;
+  }
+}
+
+function renderMember(){
+  const m = APP.member || {};
+  const f = APP.farm || {};
+
+  const lv = Number(f.level || 1);
+  const progress = levelProgressPercent();
+
+  const avatarBox = document.getElementById("memberAvatar");
+  if(avatarBox){
+    const picUrl = m.line_picture || APP.line_picture || "";
+    if(picUrl){
+      avatarBox.innerHTML = '<img src="' + picUrl + '" alt="頭貼" onerror="this.parentNode.innerHTML=window._defaultAvatar">';
+    } else {
+      avatarBox.innerHTML = window._defaultAvatar;
+    }
+  }
+
+  document.getElementById("memberName").textContent = m.name || m.line_name || "LINE會員";
+  document.getElementById("memberPhone").textContent = m.phone || m.phone_raw || m.phone_normalized || "";
+  const memberIdEl = document.getElementById("memberId");
+  if(memberIdEl) memberIdEl.textContent = m.member_id || m.id;
+
+  const levelImg = document.getElementById("memberLevelImg");
+  if(levelImg){
+    levelImg.src = levelImgSrc(lv);
+    levelImg.alt = "Lv." + lv;
+  }
+
+  const progressImg = document.getElementById("levelProgressImg");
+  if(progressImg){
+    progressImg.src = levelProgressImgSrc(progress);
+    progressImg.alt = "升級進度 " + progress + "%";
+  }
+
+  document.getElementById("memberBalance").textContent = "儲值金：$" + (m.balance || 0);
+  document.getElementById("memberBonus").textContent = "紅利金：$" + (m.bonus || 0);
+  document.getElementById("memberPoint").textContent = "遊戲點：" + (m.point || 0) + " 點";
+  const barcodeVal = m.phone || m.phone_raw || m.phone_normalized || "0000000000";
+  const barcodeSvg = document.getElementById("barcodeSvg");
+  const barcodeWrap = document.getElementById("barcode");
+  if(barcodeSvg && window.JsBarcode){
+    try{
+      if(barcodeWrap) barcodeWrap.innerHTML = '<svg id="barcodeSvg"></svg>';
+      const nextSvg = document.getElementById("barcodeSvg");
+      if(!nextSvg) throw new Error("barcode svg not found");
+      JsBarcode(nextSvg, barcodeVal, {
+        format:"CODE128",
+        displayValue:false,
+        height:24,
+        margin:2,
+        background:"transparent",
+          lineColor:"#1f1208"
+      });
+    }catch(e){
+      if(barcodeWrap){
+        barcodeWrap.textContent = barcodeVal;
+        barcodeWrap.style.fontSize = "16px";
+        barcodeWrap.style.fontWeight = "900";
+        barcodeWrap.style.color = "#1f1208";
+      }
+    }
+  } else if(barcodeWrap){
+    barcodeWrap.textContent = barcodeVal;
+    barcodeWrap.style.fontSize = "16px";
+    barcodeWrap.style.fontWeight = "900";
+    barcodeWrap.style.color = "#1f1208";
+  }
+  const memberId = (m.member_id || m.id) || "";
+  const qrcodeIdEl = document.getElementById("qrcodeId");
+  if(qrcodeIdEl) qrcodeIdEl.textContent = memberId;
+  const qrcodeEl = document.getElementById("qrcode");
+  if(qrcodeEl) qrcodeEl.textContent = memberId;
+  const lineUserIdDebugEl = document.getElementById("lineUserIdDebug");
+  if(lineUserIdDebugEl){
+    lineUserIdDebugEl.textContent = "LINE ID：" + (APP.line_user_id || m.line_user_id || "未取得");
+  }
+}
+
+// 點會員卡片時的處理
+function onMemberCardClick(){
+  const m = APP.member || {};
+  const hasPhone = !!(m.phone);
+  if(!hasPhone){
+    // 無電話 → 打開填電話 panel
+    setActivePanel("phone");
+  }
+  // 有電話 → 不做動作（卡片本身已顯示資訊）
+}
+
+// 送出電話號碼
+async function submitPhone(){
+  const phoneVal = (document.getElementById("phoneInput") || {}).value || "";
+  const msgEl = document.getElementById("phoneMsg");
+  if(msgEl) msgEl.textContent = "";
+
+  if(!phoneVal.trim()){
+    if(msgEl) msgEl.textContent = "請輸入電話號碼";
+    return;
+  }
+
+  const btn = document.querySelector("#panelPhone button[onclick='submitPhone()']");
+  if(btn){ btn.disabled = true; btn.textContent = "處理中..."; }
+
+  const res = await api("linkByPhone", {
+    line_user_id: APP.line_user_id,
+    line_name: APP.line_name,
+    phone: phoneVal.trim()
+  });
+
+  if(btn){ btn.disabled = false; btn.textContent = "確認綁定"; }
+
+  if(!res.ok){
+    if(msgEl) msgEl.textContent = res.message || "綁定失敗，請重試";
+    return;
+  }
+
+  // 成功 → 更新資料並關閉
+  APP.member = res.member || APP.member;
+  APP.farm   = res.farm   || APP.farm;
+  APP.need_phone = false;
+  renderMember();
+  setActivePanel("");
+  showMsg("✅ 會員資料綁定成功！");
+}
+
+function renderFarm(){
+  const farm = document.getElementById("farm");
+  farm.innerHTML = "";
+
+  normalizeFarm();
+
+  const plots = APP.farm.plots || [];
+
+  for(let i = 0; i < FARM_TOTAL; i++){
+    const p = plots[i] || {};
+    const div = document.createElement("div");
+    const img = document.createElement("img");
+    const bar = document.createElement("div");
+
+    div.className = "plot";
+
+    let src = BASE + "empty%20ground.png";
+
+    if(p.crop){
+      if(p.dead){
+        src = BASE + p.crop + "_stage_5_dead.png";
+      }else{
+        src = BASE + p.crop + "_stage_" + (p.stage || 0) + "_" + stageName(p.stage || 0) + ".png";
+      }
+    }
+
+    img.src = src;
+    img.onerror = function(){
+      img.src = BASE + "empty%20ground.png";
+    };
+
+    bar.className = "plot-progress";
+    bar.innerHTML = '<span style="width:' + (p.progress || 0) + '%"></span>';
+
+    if(!p.crop){
+      bar.style.display = "none";
+    }
+
+    div.onclick = function(){
+      clickPlot(i);
+    };
+
+    div.appendChild(img);
+    div.appendChild(bar);
+    farm.appendChild(div);
+  }
+}
+
+function renderFarmSummary(){
+  const box = document.getElementById("farmSummary");
+  const plots = (APP.farm && APP.farm.plots) || [];
+  const stats = {};
+
+  Object.keys(DEFAULT_CROPS).forEach(function(key){
+    stats[key] = {
+      total:0,
+      ready:0,
+      dead:0,
+      growing:0,
+      progressSum:0
+    };
+  });
+
+  plots.forEach(function(p){
+    if(!p || !p.crop || !stats[p.crop]) return;
+
+    stats[p.crop].total++;
+    stats[p.crop].progressSum += Number(p.progress || 0);
+
+    if(p.dead) stats[p.crop].dead++;
+    else if(p.ready || Number(p.stage || 0) >= 4) stats[p.crop].ready++;
+    else stats[p.crop].growing++;
+  });
+
+  box.innerHTML = "";
+
+  const plantedTotal = plots.filter(function(p){
+    return p && p.crop;
+  }).length;
+
+  const stateCard = document.createElement("div");
+  stateCard.className = "summary-item";
+  stateCard.innerHTML =
+    "<b>整體狀況</b><br>" +
+    "已種：" + plantedTotal + " 格 / " + FARM_TOTAL + " 格<br>" +
+    "等級：" + (APP.farm.level || 1) + "<br>" +
+    "升級進度：" + levelProgressPercent() + "%";
+  box.appendChild(stateCard);
+
+  Object.keys(DEFAULT_CROPS).forEach(function(key){
+    const s = stats[key];
+    if(!s.total) return;
+
+    const avg = s.total ? Math.floor(s.progressSum / s.total) : 0;
+    const div = document.createElement("div");
+    div.className = "summary-item";
+    div.innerHTML =
+      "<b>" + DEFAULT_CROPS[key].name + "</b><br>" +
+      "目前：" + s.total + " 格<br>" +
+      "成熟：" + s.ready + "｜生長：" + s.growing + "｜枯萎：" + s.dead + "<br>" +
+      "平均進度：" + avg + "%";
+    box.appendChild(div);
+  });
+
+  if(box.children.length === 1){
+    const div = document.createElement("div");
+    div.className = "summary-item";
+    div.innerHTML = "<b>目前尚未種植</b><br>先到商店買種子，或用庫存直接種植。";
+    box.appendChild(div);
+  }
+}
+
+function renderInventory(){
+  const box = document.getElementById("inventoryList");
+  if(!box) return;
+  box.innerHTML = "";
+
+  Object.keys(DEFAULT_CROPS).forEach(function(key){
+    const crop = APP.crops[key] || DEFAULT_CROPS[key];
+    const count = Number(APP.inventory[key] || 0);
+    const lv = Number((APP.farm && APP.farm.level) || 1);
+
+    const div = document.createElement("div");
+    div.className = "inv-item";
+
+    div.innerHTML =
+      '<div class="inv-head">' +
+        '<img src="' + cropItemSrc(key) + '">' +
+        '<div>' +
+          '<div>' + crop.name + '</div>' +
+          '<div>庫存：' + count + '</div>' +
+        '</div>' +
+      '</div>';
+
+    const actions = document.createElement("div");
+    actions.className = "inv-actions";
+
+    const selectBtn = document.createElement("button");
+    selectBtn.className = "small-btn green";
+    selectBtn.textContent = APP.selectedCrop === key ? "已選取" : "選種子";
+    selectBtn.onclick = function(){
+      if(crop.unlockLevel && lv < crop.unlockLevel){
+        showMsg("等級不足，需要 Lv." + crop.unlockLevel);
+        return;
+      }
+      APP.selectedCrop = key;
+      APP.mode = "plant";
+      renderAll();
+      showMsg("已選擇 " + crop.name);
+    };
+
+    const plantBtn = document.createElement("button");
+    plantBtn.className = "small-btn primary";
+    plantBtn.textContent = "直接種";
+    plantBtn.onclick = function(){
+      if(count <= 0){
+        showMsg("這個種子沒有庫存");
+        return;
+      }
+
+      APP.selectedCrop = key;
+      APP.mode = "plant";
+      showMsg("請直接點田地種植 " + crop.name);
+      renderAll();
+    };
+
+    actions.appendChild(selectBtn);
+    actions.appendChild(plantBtn);
+    div.appendChild(actions);
+    box.appendChild(div);
+  });
+}
+
+function renderShop(){
+  const box = document.getElementById("shopList");
+  box.innerHTML = "";
+
+  Object.keys(DEFAULT_CROPS).forEach(function(key){
+    const crop = APP.crops[key] || DEFAULT_CROPS[key];
+    const lv = Number((APP.farm && APP.farm.level) || 1);
+    const owned = Number(APP.inventory[key] || 0);
+
+    const div = document.createElement("div");
+    div.className = "shop-item";
+
+    div.innerHTML =
+      '<div class="shop-head">' +
+        '<img src="' + cropItemSrc(key) + '">' +
+        '<div>' +
+          '<div>' + crop.name + '</div>' +
+          '<div>價格：' + Number(crop.cost || 0) + ' 點</div>' +
+          '<div style="font-size:10px;color:#888;margin-top:2px;">庫存 ' + owned + ' ｜ Lv.' + Number(crop.unlockLevel || 1) + ' 解鎖</div>' +
+        '</div>' +
+      '</div>';
+
+    const actions = document.createElement("div");
+    actions.className = "shop-actions";
+
+    const buy1 = document.createElement("button");
+    buy1.className = "small-btn";
+    buy1.textContent = "買 1";
+    buy1.onclick = function(){
+      buySeed(key, 1);
+    };
+
+    const buy5 = document.createElement("button");
+    buy5.className = "small-btn primary";
+    buy5.textContent = "買 5";
+    buy5.onclick = function(){
+      buySeed(key, 5);
+    };
+
+    if(crop.unlockLevel && lv < crop.unlockLevel){
+      buy1.disabled = true;
+      buy5.disabled = true;
+    }
+
+    actions.appendChild(buy1);
+    actions.appendChild(buy5);
+    div.appendChild(actions);
+    box.appendChild(div);
+  });
+}
+
+function getRewardStampCount(key){
+  const f = APP.farm || {};
+  const stampRaw =
+    (f.rewardStamps && f.rewardStamps[key]) !== undefined ? (f.rewardStamps && f.rewardStamps[key]) :
+    (f.harvestStamps && f.harvestStamps[key]) !== undefined ? (f.harvestStamps && f.harvestStamps[key]) :
+    (f.harvestCount && f.harvestCount[key]) !== undefined ? (f.harvestCount && f.harvestCount[key]) :
+    0;
+  return Number(stampRaw);
+}
+
+function renderReward(){
+  const box = document.getElementById("rewardList");
+  const cp = (APP.farm && APP.farm.coupons) || {};
+
+  box.innerHTML = "";
+
+  Object.keys(DEFAULT_CROPS).forEach(function(key){
+    const crop = APP.crops[key] || DEFAULT_CROPS[key];
+    const stamps = getRewardStampCount(key);
+    const coupons = Number(cp[key] || 0);
+    const canRedeem = stamps >= REWARD_NEED;
+
+    const div = document.createElement("div");
+    div.className = "reward-item";
+
+    div.innerHTML =
+      '<div class="reward-head">' +
+        '<img src="' + cropItemSrc(key) + '">' +
+        '<div>' +
+          '<div>' + crop.name + '</div>' +
+          '<div>收集章：' + stamps + '/' + REWARD_NEED + '</div>' +
+          '<div>兌換券：' + coupons + '</div>' +
+        '</div>' +
+      '</div>';
+
+    const actions = document.createElement("div");
+    actions.className = "reward-actions";
+
+    const redeemBtn = document.createElement("button");
+    redeemBtn.className = "small-btn primary";
+    redeemBtn.textContent = canRedeem ? "兌換" : "未達成";
+    redeemBtn.disabled = !canRedeem;
+    redeemBtn.onclick = function(){
+      redeemReward(key);
+    };
+
+    actions.appendChild(redeemBtn);
+    div.appendChild(actions);
+    box.appendChild(div);
+  });
+}
+
+function renderMy(){
+  const box = document.getElementById("myCard");
+  const m = APP.member || {};
+  const f = APP.farm || {};
+
+  const invTotal = Object.keys(APP.inventory).reduce(function(sum, key){
+    return sum + Number(APP.inventory[key] || 0);
+  }, 0);
+
+  const couponTotal = Object.keys(f.coupons || {}).reduce(function(sum, key){
+    return sum + Number(f.coupons[key] || 0);
+  }, 0);
+
+  box.innerHTML = "";
+
+  const items = [
+    ["姓名", m.name || m.line_name || "LINE會員"],
+    ["會員編號", m.member_id || m.id || "-"],
+    ["電話", m.phone || m.phone_raw || m.phone_normalized || "未綁定"],
+    ["目前等級", "Lv." + Number(f.level || 1)],
+    ["升級進度", levelProgressPercent() + "%"],
+    ["儲值餘額", "$" + Number(m.balance || 0)],
+    ["紅利點數", Number(m.bonus || 0)],
+    ["遊戲點數", Number(m.point || 0)],
+    ["種子總庫存", invTotal],
+    ["兌換券總數", couponTotal]
+  ];
+
+  items.forEach(function(item){
+    const div = document.createElement("div");
+    div.className = "my-item";
+    div.innerHTML = "<b>" + item[0] + "</b><br>" + item[1];
+    box.appendChild(div);
+  });
+}
+
+function renderMore(){
+  document.getElementById("moreCard").innerHTML =
+    '<div style="display:grid;gap:8px;">' +
+      '<div>' +
+        '<b>遊戲規則說明</b>' +
+        '<div style="margin-top:6px;line-height:1.6;">' +
+          '1. 到商店購買種子，種子會進入農場庫存。<br>' +
+          '2. 到農場概況或庫存選擇種子，再點田地種植。<br>' +
+          '3. 澆水可增加作物成長進度，成熟後按收成再點田地。<br>' +
+          '4. 每收成 1 個作物會累積升級進度。<br>' +
+          '5. Lv.1 升 Lv.2 需要 20 個，之後每級 +5。<br>' +
+          '6. 每種作物收集滿 ' + REWARD_NEED + ' 章，可在獎勵頁兌換 1 張對應兌換券。' +
+        '</div>' +
+      '</div>' +
+      '<div>' +
+        '<b>店家資訊</b>' +
+        '<div style="margin-top:6px;line-height:1.6;">' +
+          '店名：' + STORE_INFO.name + '<br>' +
+          '地址：' + STORE_INFO.address + '<br>' +
+          '電話：' + STORE_INFO.phone + '<br>' +
+          '營業時間：' + STORE_INFO.hours +
+        '</div>' +
+      '</div>' +
+    '</div>';
+}
+
+function renderAll(){
+  normalizeFarm();
+  renderMember();
+  renderFarm();
+  renderFarmSummary();
+  renderShop();
+  renderReward();
+  renderMy();
+  renderMore();
+
+  const modeText = document.getElementById("modeText");
+  const cropText = document.getElementById("cropText");
+  const weatherText = document.getElementById("weatherText");
+
+  if(modeText){
+    modeText.textContent = APP.mode === "harvest" ? "收成" : "種植";
+  }
+
+  if(cropText){
+    cropText.textContent = (APP.crops[APP.selectedCrop] || DEFAULT_CROPS[APP.selectedCrop] || {}).name || "未選擇";
+  }
+
+  if(weatherText){
+    const w = (APP.farm && APP.farm.weather) || {};
+    weatherText.textContent = (w.text || "無雨") + " / " + (w.tempC || 25) + "°C";
+  }
+
+  // 更新天氣標籤（點數卡下方）
+  (function(){
+    const w = (APP.farm && APP.farm.weather) || {};
+    const text = String(w.text || "無雨");
+    const tempC = Number(w.tempC || 25);
+    const rain = Number(w.rainMm || 0);
+    let icon = "🌤";
+    const tl = text.toLowerCase();
+    if(tl.indexOf("颱風") >= 0 || tl.indexOf("typhoon") >= 0) icon = "🌀";
+    else if(tl.indexOf("雷陣雨") >= 0 || tl.indexOf("大雷雨") >= 0 || tl.indexOf("閃電") >= 0) icon = "🌩️";
+    else if(tl.indexOf("暴雨") >= 0 || tl.indexOf("豪雨") >= 0 || rain >= 8) icon = "⛈️";
+    else if(tl.indexOf("大雨") >= 0 || tl.indexOf("中雨") >= 0 || rain >= 4) icon = "🌧️";
+    else if(tl.indexOf("雨") >= 0 || rain > 0) icon = "🌦️";
+    else if(tl.indexOf("強風") >= 0 || tl.indexOf("颳風") >= 0 || tl.indexOf("陣風") >= 0) icon = "🌬️";
+    else if(tl.indexOf("陰") >= 0) icon = "🌥️";
+    else if(tl.indexOf("多雲") >= 0 || tl.indexOf("晴時多雲") >= 0) icon = "⛅️";
+    else icon = "☀️";
+    const badge = document.getElementById("weatherBadgeText");
+    const iconEl = document.getElementById("weatherIcon");
+    if(badge) badge.innerHTML = '<span class="weather-badge-label">📍埔里鎮</span> <span class="weather-badge-desc">' + text + '</span> <span class="weather-badge-temp">' + tempC + '\u00b0C</span> <span class="weather-badge-icon">' + icon + '</span>';
+  })();
+
+  // 依天氣 + 時段切換背景圖與動態效果層
+  (function(){
+    const BG_BASE = "https://pub-e41c0e5930434282a405e422bcc59113.r2.dev/FARM%20Game%20UI/bgs/";
+    const w = (APP.farm && APP.farm.weather) || {};
+    const rain = Number(w.rainMm || 0);
+    const text = String(w.text || "").toLowerCase();
+    const tempC = Number(w.tempC || 25);
+
+    let bg = "";
+    let effect = "";
+    const h = new Date().getHours();
+    const isNight = (h >= 18 || h < 5);  // 18:00 ~ 04:59 視為夜晚
+
+    if(isNight){
+      // 夜晚/半夜優先用夜景圖，不管天氣
+      if(h >= 22 || h < 5){
+        bg = "06_farm_midnight.png";
+        effect = "midnight";
+      } else {
+        bg = "05_farm_night.png";
+        effect = "dark";
+      }
+    } else if(text.indexOf("颱風") >= 0 || text.indexOf("typhoon") >= 0 || text.indexOf("暴雨") >= 0){
+      bg = "09_farm_typhoon.png";
+      effect = "heavy-rain dark lightning";
+    } else if(rain >= 8 || text.indexOf("大雨") >= 0 || text.indexOf("豪雨") >= 0){
+      bg = "09_farm_typhoon.png";
+      effect = "heavy-rain dark lightning";
+    } else if(rain > 0 || text.indexOf("雨") >= 0 || text.indexOf("rain") >= 0){
+      bg = "07_farm_rain.png";
+      effect = "rain fog";
+    } else if(text.indexOf("陰") >= 0 || text.indexOf("cloud") >= 0 || text.indexOf("多雲") >= 0){
+      bg = "08_farm_cloudy.png";
+      effect = "fog";
+    } else {
+      if(h >= 5 && h < 9){
+        bg = "01_farm_morning.png";
+        effect = "fog";
+      } else if(h >= 9 && h < 12){
+        bg = "02_farm_noon.png";
+        effect = "";
+      } else if(h >= 12 && h < 15){
+        bg = tempC >= 30 ? "03_farm_hot_noon.png" : "02_farm_noon.png";
+        effect = tempC >= 30 ? "hot" : "";
+      } else {
+        bg = "04_farm_evening.png";
+        effect = "";
+      }
+    }
+
+    const el = document.getElementById("bgMain");
+    if(el && bg && !el.src.endsWith(bg)){
+      el.style.opacity = "0";
+      setTimeout(function(){
+        el.src = BG_BASE + bg;
+        el.style.opacity = "1";
+      }, 180);
+    }
+
+    const weatherLayer = document.getElementById("weatherLayer");
+    if(weatherLayer){
+      weatherLayer.className = "weather-layer" + (effect ? " " + effect : "");
+    const nightLightEl = document.getElementById("farmNightLight");
+    if(nightLightEl){
+      if(isNight) nightLightEl.classList.add("active");
+      else nightLightEl.classList.remove("active");
+    }
+    }
+  })();
+
+  setActivePanel(APP.activePanel || "");
+}
+
+function buySeed(key, qty){
+  qty = Number(qty || 1);
+
+  const crop = APP.crops[key] || DEFAULT_CROPS[key];
+  const lv = Number((APP.farm && APP.farm.level) || 1);
+
+  if(crop.unlockLevel && lv < crop.unlockLevel){
+    showMsg("等級不足，需要 Lv." + crop.unlockLevel);
+    return;
+  }
+
+  const cost = Number(crop.cost || 0) * qty;
+
+  if(APP.localMode){
+    APP.member.point = Number(APP.member.point || 0);
+    if(APP.member.point < cost){
+      showMsg("點數不足");
+      return;
+    }
+    APP.member.point -= cost;
+    APP.inventory[key] = Number(APP.inventory[key] || 0) + qty;
+    renderAll();
+    showMsg("已購買 " + crop.name + " × " + qty);
+    return;
+  }
+
+  api("shopBuy", {
+    line_user_id: APP.line_user_id,
+    crop: key,
+    qty: qty
+  }).then(function(res){
+    if(res && res.ok){
+      if(res.member) APP.member = res.member;
+      if(APP.member && res.point_after !== undefined){
+        APP.member.point = res.point_after;
+      }
+
+      if(res.inventory){
+        APP.inventory = res.inventory;
+      }else{
+        APP.inventory[key] = Number(APP.inventory[key] || 0) + qty;
+      }
+
+      renderAll();
+      showMsg(res.message || ("已購買 " + crop.name + " × " + qty));
+      return;
+    }
+
+    // 後端失敗就不要再自己假扣點，避免前端看起來成功但資料表沒寫入。
+    showMsg((res && res.message) || "購買失敗");
+  });
+}
+
+function redeemReward(key){
+  const crop = APP.crops[key] || DEFAULT_CROPS[key];
+  const stamps = getRewardStampCount(key);
+
+  if(stamps < REWARD_NEED){
+    showMsg("還沒收集滿 " + REWARD_NEED + " 章");
+    return;
+  }
+
+  if(APP.localMode){
+    APP.farm.rewardStamps[key] = Number(APP.farm.rewardStamps[key] || 0) - REWARD_NEED;
+    APP.farm.coupons[key] = Number(APP.farm.coupons[key] || 0) + 1;
+    renderAll();
+    showMsg("已兌換 " + crop.name + " 兌換券");
+    return;
+  }
+
+  api("farmRedeemCoupon", {
+    line_user_id: APP.line_user_id,
+    crop: key
+  }).then(function(res){
+    if(res && res.ok){
+      APP.farm = res.farm || APP.farm;
+      renderAll();
+      showMsg(res.message || ("已兌換 " + crop.name + " 兌換券"));
+      return;
+    }
+
+    APP.farm.rewardStamps[key] = Number(APP.farm.rewardStamps[key] || stamps) - REWARD_NEED;
+    APP.farm.coupons[key] = Number(APP.farm.coupons[key] || 0) + 1;
+    renderAll();
+    showMsg("已兌換 " + crop.name + " 兌換券");
+  });
+}
+
+async function clickPlot(index){
+  if(APP.mode === "harvest"){
+    const res = await api("farmHarvest",{
+      line_user_id:APP.line_user_id,
+      index:index
+    });
+
+    if(!res.ok){
+      if(APP.localMode){
+        const plot = APP.farm.plots[index];
+        if(!plot || !plot.crop){
+          showMsg("這格沒有作物");
+          return;
+        }
+        if(plot.dead){
+          APP.farm.plots[index] = {};
+          renderAll();
+          showMsg("已清除枯萎作物");
+          return;
+        }
+        if(!plot.ready && Number(plot.stage || 0) < 4){
+          showMsg("作物尚未成熟");
+          return;
+        }
+
+        const cropKey = plot.crop;
+        APP.farm.harvestCount[cropKey] = Number(APP.farm.harvestCount[cropKey] || 0) + 1;
+        APP.farm.rewardStamps[cropKey] = Number(APP.farm.rewardStamps[cropKey] || 0) + 1;
+
+        APP.farm.levelHarvestCount = Number(APP.farm.levelHarvestCount || 0) + 1;
+        while(APP.farm.levelHarvestCount >= levelNeed(APP.farm.level)){
+          APP.farm.levelHarvestCount -= levelNeed(APP.farm.level);
+          APP.farm.level = Number(APP.farm.level || 1) + 1;
+          if(APP.farm.level > 18){
+            APP.farm.level = 18;
+            APP.farm.levelHarvestCount = 0;
+            break;
+          }
+        }
+        APP.farm.levelNeed = levelNeed(APP.farm.level);
+        APP.farm.plots[index] = {};
+        APP.mode = "plant";
+        renderAll();
+        showMsg("收成成功");
+        return;
+      }
+
+      showMsg(res.message || "收成失敗");
+      return;
+    }
+
+    APP.farm = res.farm || APP.farm;
+    if(res.inventory) APP.inventory = res.inventory;
+    APP.mode = "plant";
+    renderAll();
+    showMsg(res.message || "收成成功");
+    return;
+  }
+
+  const plot = APP.farm.plots[index] || {};
+  if(plot.crop){
+    showMsg("這格已有作物，請先收成");
+    return;
+  }
+
+  showPlantPicker(index);
+}
+
+function showPlantPicker(index){
+  const picker = document.getElementById("plantPicker");
+  const grid = document.getElementById("plantPickerGrid");
+  grid.innerHTML = "";
+  const lv = Number((APP.farm && APP.farm.level) || 1);
+
+  Object.keys(DEFAULT_CROPS).forEach(function(key){
+    const crop = APP.crops[key] || DEFAULT_CROPS[key];
+    const count = Number(APP.inventory[key] || 0);
+    const locked = !!(crop.unlockLevel && lv < crop.unlockLevel);
+
+    const item = document.createElement("div");
+    item.className = "plant-picker-item";
+
+    const img = document.createElement("img");
+    img.src = cropItemSrc(key);
+
+    const info = document.createElement("div");
+    info.className = "plant-picker-info";
+    info.innerHTML = crop.name + "<br>庫存：" + count + (locked ? "<br><span style='color:#c44;font-size:11px;'>需 Lv." + crop.unlockLevel + "</span>" : "");
+
+    const btn = document.createElement("button");
+    btn.className = "plant-picker-btn";
+    btn.textContent = "種植";
+    btn.disabled = count <= 0 || locked;
+    btn.onclick = function(){
+      closePlantPicker();
+      doPlant(index, key);
+    };
+
+    item.appendChild(img);
+    item.appendChild(info);
+    item.appendChild(btn);
+    grid.appendChild(item);
+  });
+
+  picker.classList.add("active");
+}
+
+function closePlantPicker(){
+  document.getElementById("plantPicker").classList.remove("active");
+}
+
+function pickerBackdropClick(e){
+  if(e.target === document.getElementById("plantPicker")) closePlantPicker();
+}
+
+async function doPlant(index, key){
+  // 防止連點：同一格還在等待時不重複送出
+  if(APP._plantingIndex !== undefined && APP._plantingIndex !== null){
+    showMsg("請稍候...");
+    return;
+  }
+
+  const crop = APP.crops[key] || DEFAULT_CROPS[key];
+  const count = Number(APP.inventory[key] || 0);
+  if(count <= 0){
+    showMsg(crop.name + " 庫存不足，請先到商店購買");
+    setActivePanel("shop");
+    return;
+  }
+
+  // 立刻鎖庫存（樂觀更新），防止 API 回來前再次種植
+  APP._plantingIndex = index;
+  APP.inventory[key] = count - 1;
+  APP.farm.plots[index] = {
+    crop:key,
+    stage:0,
+    progress:0,
+    plantedAt:new Date().toISOString(),
+    lastWaterDate:"",
+    noWaterDays:0,
+    dead:false,
+    ready:false
+  };
+  renderAll();
+
+  const res = await api("farmPlant",{
+    line_user_id:APP.line_user_id,
+    crop:key,
+    index:index
+  });
+
+  APP._plantingIndex = null;
+
+  if(!res.ok && !APP.localMode){
+    // 回滾：API 失敗時還原
+    APP.inventory[key] = count;
+    APP.farm.plots[index] = {};
+    renderAll();
+    showMsg(res.message || "種植失敗");
+    return;
+  }
+
+  if(res && res.ok){
+    APP.farm = res.farm || APP.farm;
+    if(res.inventory) APP.inventory = res.inventory;
+    if(APP.member && res.point_after !== undefined){
+      APP.member.point = res.point_after;
+    }
+  }
+
+  APP.selectedCrop = key;
+  renderAll();
+  showMsg(crop.name + " 種植成功");
+}
+
+async function farmWater(){
+  const res = await api("farmWater",{
+    line_user_id:APP.line_user_id
+  });
+
+  if(!res.ok && !APP.localMode){
+    showMsg(res.message || "澆水失敗");
+    return;
+  }
+
+  if(APP.localMode){
+    APP.farm.plots = (APP.farm.plots || []).map(function(p){
+      if(!p || !p.crop || p.dead) return p || {};
+      const next = Object.assign({}, p);
+      next.progress = Math.min(100, Number(next.progress || 0) + 35);
+      if(next.progress >= 100){
+        next.ready = true;
+        next.stage = 4;
+      }else{
+        next.stage = Math.min(3, Math.floor(next.progress / 25) + 1);
+      }
+      next.lastWaterDate = new Date().toISOString();
+      return next;
+    });
+  }else{
+    APP.farm = res.farm || APP.farm;
+    if(res.inventory) APP.inventory = res.inventory;
+  }
+
+  renderAll();
+  showMsg((res && res.message) || "澆水成功");
+}
+
+function buildLocalBootstrap(){
+  APP.localMode = true;
+  APP.member = {
+    name: APP.line_name || "LINE會員",
+    line_name: APP.line_name || "LINE會員",
+    line_user_id: APP.line_user_id,
+    phone:"0987654321",
+    member_id:"ANG0603",
+    point:60,
+    balance:0,
+    bonus:0
+  };
+
+  APP.farm = {
+    level:1,
+    levelHarvestCount:0,
+    levelNeed:20,
+    plots:[],
+    harvestCount:{},
+    rewardStamps:{},
+    coupons:{},
+    weather:{
+      text:"無雨",
+      tempC:25,
+      rainMm:0
+    }
+  };
+
+  APP.crops = JSON.parse(JSON.stringify(DEFAULT_CROPS));
+  APP.offers = {};
+  APP.inventory = {
+    cabbage:3,
+    carrot:3,
+    corn:0,
+    watermelon:3,
+    strawberry:0
+  };
+}
+
+async function reload(silent){
+  const res = await api("getFarmBootstrap",{
+    line_user_id:APP.line_user_id,
+    line_name:APP.line_name
+  });
+
+  if(!res.ok){
+    const debugEl = document.getElementById("lineUserIdDebug");
+    if(debugEl){
+      debugEl.textContent = "LINE ID：" + (APP.line_user_id || "未取得") + "｜API：" + (res.message || "讀取失敗");
+    }
+
+    if(!silent){
+      buildLocalBootstrap();
+      renderAll();
+      showMsg(res.message || "讀取後端資料失敗，暫用本機測試資料");
+    }
+    return;
+  }
+
+  APP.localMode = false;
+  APP.member = res.member || {};
+  APP.farm = res.farm || {};
+  APP.need_phone = !!res.need_phone;
+  APP.crops = Object.assign({}, DEFAULT_CROPS, res.crops || {});
+  APP.offers = res.offers || {};
+  APP.inventory = res.inventory || res.seedInventory || res.seed_inventory || APP.farm.seedInventory || APP.farm.inventory || {};
+  if(!silent) APP.activePanel = "";
+  renderAll();
+}
+
+async function init(){
+  // --- LINE Mini App / LIFF 初始化 ---
+  // 注意：這裡可以用網址參數覆蓋，例如 ?liff_id=2009744942-xxxxxxx
+  // 如果這裡只有 Channel ID 而不是完整 LIFF ID，LIFF 會初始化失敗，會改用 URL 參數 / 測試 ID。
+  const LIFF_ID = getParam("liff_id") || getParam("liffId") || "2009103012-Cm3dsFrN";
+
+  try{
+    // 限制 liff.init 最多等 4 秒，避免卡白畫面
+    await Promise.race([
+      liff.init({ liffId: LIFF_ID }),
+      new Promise(function(_,reject){
+        setTimeout(function(){ reject(new Error("liff timeout")); }, 4000);
+      })
+    ]);
+
+    if(liff.isLoggedIn()){
+      const profile = await liff.getProfile();
+      APP.line_user_id = profile.userId || "";
+      APP.line_name    = profile.displayName || "LINE會員";
+      APP.line_picture = profile.pictureUrl  || "";
+    } else if(liff.isInClient()){
+      liff.login();
+      return;
+    } else {
+      throw new Error("not in LINE client");
+    }
+  } catch(e){
+    // 非 LINE 環境、LIFF ID 錯誤、或逾時時，改用 URL 參數。
+    APP.line_user_id = getParam("line_user_id") || getParam("userId") || "U_test_farm";
+    APP.line_name    = getParam("line_name")    || getParam("name")   || "LINE會員";
+    APP.line_picture = getParam("line_picture") || getParam("pictureUrl") || "";
+  }
+
+  // 先快速顯示 local 畫面，避免白畫面。
+  buildLocalBootstrap();
+  renderAll();
+
+  // 背景從 server 載入真實資料，回來後靜默更新。
+  try{
+    await reload(true);
+  }catch(err){
+    const debugEl = document.getElementById("lineUserIdDebug");
+    if(debugEl){
+      debugEl.textContent = "LINE ID：" + (APP.line_user_id || "未取得") + "｜API：讀取失敗";
+    }
+  }
+}
+
+init();
+</script>
+
+</body>
+</html>
